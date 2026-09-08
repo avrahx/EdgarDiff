@@ -1,0 +1,30 @@
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: edgardiff-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - SEC_EDGAR_USER_AGENT=EdgarDiff admin@edgardiff.local
+      - SEC_CACHE_DIR=/app/data/cache
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+    volumes:
+      - ./data/cache:/app/data/cache
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: edgardiff-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000/api
+    depends_on:
+      - backend
+    restart: unless-stopped
