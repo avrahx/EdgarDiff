@@ -9,11 +9,15 @@ aiofiles==25.1.0
 aiohappyeyeballs==2.7.1
     # via aiohttp
 aiohttp==3.14.3
-    # via litellm
+    # via
+    #   instructor
+    #   litellm
 aiosignal==1.4.0
     # via aiohttp
 annotated-doc==0.0.5
-    # via fastapi
+    # via
+    #   fastapi
+    #   typer
 annotated-types==0.8.0
     # via pydantic
 anyio==4.15.1
@@ -61,10 +65,13 @@ colorama==0.4.6
     #   loguru
     #   pytest
     #   tqdm
+    #   typer
 cssutils==2.15.0
     # via sec-parser
 distro==1.9.0
     # via openai
+docstring-parser==0.18.0
+    # via instructor
 edgartools==5.56.0
     # via -r requirements.in
 encutils==1.0.0
@@ -119,12 +126,17 @@ importlib-metadata==8.9.0
     # via litellm
 iniconfig==2.3.0
     # via pytest
+instructor==1.16.0
+    # via -r requirements.in
 jinja2==3.1.6
     # via
     #   edgartools
+    #   instructor
     #   litellm
-jiter==0.16.0
-    # via openai
+jiter==0.14.0
+    # via
+    #   instructor
+    #   openai
 jmespath==1.1.0
     # via
     #   boto3
@@ -160,7 +172,9 @@ numpy==2.5.3
     #   pandas
     #   rank-bm25
 openai==2.54.0
-    # via litellm
+    # via
+    #   instructor
+    #   litellm
 orjson==3.12.0
     # via edgartools
 packaging==26.3
@@ -188,11 +202,14 @@ pydantic==2.13.5
     #   -r requirements.in
     #   edgartools
     #   fastapi
+    #   instructor
     #   litellm
     #   openai
     #   pydantic-settings
 pydantic-core==2.46.5
-    # via pydantic
+    # via
+    #   instructor
+    #   pydantic
 pydantic-settings==2.15.0
     # via litellm
 pygments==2.21.0
@@ -237,13 +254,19 @@ referencing==0.37.0
     #   jsonschema
     #   jsonschema-specifications
 regex==2026.9.3
-    # via tiktoken
+    # via
+    #   instructor
+    #   tiktoken
 requests==2.34.2
     # via
+    #   instructor
     #   sec-edgar-downloader
     #   tiktoken
-rich==15.0.0
-    # via edgartools
+rich==14.3.4
+    # via
+    #   edgartools
+    #   instructor
+    #   typer
 rpds-py==2026.6.3
     # via
     #   jsonschema
@@ -256,6 +279,8 @@ sec-edgar-downloader==5.1.0
     # via sec-downloader
 sec-parser==0.58.1
     # via -r requirements.in
+shellingham==1.5.4
+    # via typer
 six==1.17.0
     # via python-dateutil
 sniffio==1.3.1
@@ -271,7 +296,9 @@ tabulate==0.9.0
     #   edgartools
     #   sec-parser
 tenacity==9.1.4
-    # via stamina
+    # via
+    #   instructor
+    #   stamina
 textdistance==4.6.3
     # via edgartools
 thefuzz==0.22.1
@@ -287,6 +314,8 @@ tqdm==4.70.0
     #   openai
 truststore==0.10.4
     # via edgartools
+typer==0.27.2
+    # via instructor
 typing-extensions==4.16.0
     # via
     #   aiohttp
