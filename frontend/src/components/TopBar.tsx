@@ -3,35 +3,38 @@
 import React, { useState } from "react";
 import {
   Search,
-  Sparkles,
   Layers,
   FileSpreadsheet,
-  CheckCircle2,
-  AlertCircle,
+  Download,
+  BookOpen,
+  Command,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 
 interface TopBarProps {
-  activeTab: "diff" | "covenants";
-  onTabChange: (tab: "diff" | "covenants") => void;
+  activeTab: "covenants" | "diff";
+  onTabChange: (tab: "covenants" | "diff") => void;
   ticker: string;
-  onTickerChange: (ticker: string) => void;
-  onSearch: (ticker: string) => void;
+  onSearch: (query: string) => void;
   onLoadSampleDeal: () => void;
+  onExportMemo: () => void;
   isBackendOnline: boolean;
   isLoading: boolean;
 }
 
-const SAMPLE_TICKERS = ["MSFT", "ATVI", "AAPL", "NVDA", "TSLA"];
+const PRESET_COMMANDS = [
+  { label: "MSFT / ATVI (8-K)", value: "ATVI", mode: "covenants" as const },
+  { label: "AAPL (10-K YoY)", value: "AAPL", mode: "diff" as const },
+  { label: "NVDA (Item 1A)", value: "NVDA", mode: "diff" as const },
+];
 
 export function TopBar({
   activeTab,
   onTabChange,
   ticker,
-  onTickerChange,
   onSearch,
   onLoadSampleDeal,
+  onExportMemo,
   isBackendOnline,
   isLoading,
 }: TopBarProps) {
@@ -44,143 +47,168 @@ export function TopBar({
     }
   };
 
-  const handleChipClick = (sym: string) => {
-    setInputVal(sym);
-    onTickerChange(sym);
-    onSearch(sym);
+  const handleCommandClick = (cmd: typeof PRESET_COMMANDS[0]) => {
+    setInputVal(cmd.value);
+    onTabChange(cmd.mode);
+    onSearch(cmd.value);
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-slate-800 bg-slate-950/90 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        {/* Left: Branding & Tagline */}
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
-              <Layers className="h-5 w-5" />
+    <header className="sticky top-0 z-50 h-14 w-full border-b border-zinc-800/80 bg-[#090a0c]/90 backdrop-blur-md">
+      <div className="mx-auto flex h-14 w-full max-w-[1720px] items-center justify-between px-4 sm:px-6">
+        {/* Left: Terminal Brand & Live Status Ping */}
+        <div className="flex items-center space-x-3 sm:space-x-4">
+          <div className="flex items-center space-x-2">
+            <div className="flex h-7 w-7 items-center justify-center rounded border border-zinc-800 bg-zinc-900 text-sky-400 shadow-inner">
+              <Layers className="h-4 w-4" />
             </div>
-            <div>
-              <div className="flex items-center space-x-2">
-                <span className="font-mono text-base font-bold tracking-tight text-white">
-                  Edgar<span className="text-emerald-400">Diff</span>
+            <div className="flex items-baseline space-x-2">
+              <span className="font-mono text-sm font-bold tracking-tight text-zinc-100">
+                EDGAR<span className="text-zinc-500">{" // "}</span>DIFF
+              </span>
+              <div className="hidden md:flex items-center space-x-1.5 rounded-sm bg-zinc-900/90 px-1.5 py-0.5 border border-zinc-800">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span
+                    className={`absolute inline-flex h-full w-full rounded-full opacity-75 animate-ping ${
+                      isBackendOnline ? "bg-emerald-400" : "bg-amber-400"
+                    }`}
+                  />
+                  <span
+                    className={`relative inline-flex h-1.5 w-1.5 rounded-full ${
+                      isBackendOnline ? "bg-emerald-500" : "bg-amber-500"
+                    }`}
+                  />
                 </span>
-                <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-400 font-mono border border-emerald-500/20">
-                  v1.0
+                <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400">
+                  {isBackendOnline ? "LIVE EDGAR V2.1" : "STANDALONE ENGINE"}
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 font-sans hidden sm:block">
-                SEC 10-K Variance & M&A Covenant Intelligence
-              </p>
             </div>
           </div>
 
-          {/* Backend Status Pill */}
-          <div className="hidden lg:flex items-center space-x-1.5 pl-3 border-l border-slate-800">
-            {isBackendOnline ? (
-              <Badge
-                variant="success"
-                className="gap-1 text-[11px] font-mono py-0.5 px-2 bg-emerald-950/40 border-emerald-800/50"
-              >
-                <CheckCircle2 className="h-3 w-3 text-emerald-400" />
-                <span>API :8000</span>
-              </Badge>
-            ) : (
-              <Badge
-                variant="warning"
-                className="gap-1 text-[11px] font-mono py-0.5 px-2 bg-amber-950/40 border-amber-800/50"
-              >
-                <AlertCircle className="h-3 w-3 text-amber-400" />
-                <span>Local Cache</span>
-              </Badge>
-            )}
+          {/* Segmented Control Workspace Toggle */}
+          <div className="flex items-center rounded-md border border-zinc-800 bg-zinc-900/90 p-0.5">
+            <button
+              id="view-toggle-covenants"
+              type="button"
+              onClick={() => onTabChange("covenants")}
+              className={`flex items-center space-x-1.5 rounded px-2.5 py-1 text-xs font-medium transition ${
+                activeTab === "covenants"
+                  ? "bg-zinc-800 text-sky-300 font-semibold shadow-sm"
+                  : "text-zinc-400 hover:text-zinc-200"
+              }`}
+            >
+              <FileSpreadsheet className="h-3.5 w-3.5" />
+              <span>M&A Deal Covenants</span>
+            </button>
+            <button
+              id="view-toggle-diff"
+              type="button"
+              onClick={() => onTabChange("diff")}
+              className={`flex items-center space-x-1.5 rounded px-2.5 py-1 text-xs font-medium transition ${
+                activeTab === "diff"
+                  ? "bg-zinc-800 text-sky-300 font-semibold shadow-sm"
+                  : "text-zinc-400 hover:text-zinc-200"
+              }`}
+            >
+              <Layers className="h-3.5 w-3.5" />
+              <span>10-K Section Diff</span>
+            </button>
           </div>
         </div>
 
-        {/* Center: Search & Quick Tickers */}
-        <div className="flex items-center space-x-3 flex-1 max-w-md mx-4">
-          <form onSubmit={handleSubmit} className="relative w-full">
+        {/* Center: Command Bar & Preset Pills */}
+        <div className="hidden lg:flex items-center space-x-3 flex-1 max-w-xl mx-4">
+          <form onSubmit={handleSubmit} className="relative w-72">
             <div className="relative flex items-center">
-              <Search className="absolute left-3 h-4 w-4 text-slate-400 pointer-events-none" />
+              <Search className="absolute left-2.5 h-3.5 w-3.5 text-zinc-500 pointer-events-none" />
               <input
                 id="ticker-search-input"
                 type="text"
                 value={inputVal}
                 onChange={(e) => setInputVal(e.target.value.toUpperCase())}
-                placeholder="Search Ticker (e.g. MSFT, AAPL)..."
-                className="h-9 w-full rounded-md border border-slate-800 bg-slate-900/90 pl-9 pr-14 text-xs font-mono uppercase text-slate-100 placeholder:text-slate-500 focus:border-emerald-500/50 focus:outline-none focus:ring-1 focus:ring-emerald-500/50"
+                placeholder="Search Ticker, Deal, CIK..."
+                className="h-8 w-full rounded-md border border-zinc-800 bg-zinc-900/90 pl-8 pr-10 text-xs font-mono text-zinc-100 placeholder:text-zinc-600 focus:border-zinc-600 focus:outline-none focus:ring-1 focus:ring-zinc-600"
               />
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="absolute right-1.5 h-6 px-2 text-[10px] font-mono font-medium rounded bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white transition"
-              >
-                Go
-              </button>
+              <div className="absolute right-2 flex items-center space-x-0.5 text-[10px] font-mono text-zinc-500 pointer-events-none">
+                <Command className="h-3 w-3" />
+                <span>K</span>
+              </div>
             </div>
           </form>
 
-          {/* Quick ticker chips */}
-          <div className="hidden xl:flex items-center space-x-1">
-            {SAMPLE_TICKERS.map((sym) => (
+          {/* Quick presets */}
+          <div className="flex items-center space-x-1.5">
+            {PRESET_COMMANDS.map((cmd) => (
               <button
-                key={sym}
-                id={`ticker-chip-${sym.toLowerCase()}`}
+                key={cmd.label}
                 type="button"
-                onClick={() => handleChipClick(sym)}
-                className={`rounded px-2 py-1 text-[10px] font-mono font-semibold transition border ${
-                  ticker === sym
-                    ? "bg-emerald-950/80 text-emerald-300 border-emerald-500/50"
-                    : "bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-700 hover:text-slate-200"
-                }`}
+                onClick={() => handleCommandClick(cmd)}
+                className="rounded border border-zinc-800/80 bg-zinc-900/60 px-2 py-0.5 font-mono text-[11px] text-zinc-400 hover:border-zinc-700 hover:text-zinc-200 transition"
               >
-                {sym}
+                {cmd.label}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Right: View Mode Toggle & Sample Deal Button */}
-        <div className="flex items-center space-x-2.5">
-          {/* View Mode Toggle */}
-          <div className="flex items-center rounded-lg border border-slate-800 bg-slate-900/90 p-1">
-            <button
-              id="view-toggle-diff"
-              onClick={() => onTabChange("diff")}
-              className={`flex items-center space-x-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition ${
-                activeTab === "diff"
-                  ? "bg-slate-800 text-emerald-400 shadow-sm font-semibold"
-                  : "text-slate-400 hover:text-slate-200"
-              }`}
-            >
-              <FileSpreadsheet className="h-3.5 w-3.5" />
-              <span>10-K Variance</span>
-            </button>
-            <button
-              id="view-toggle-covenants"
-              onClick={() => onTabChange("covenants")}
-              className={`flex items-center space-x-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition ${
-                activeTab === "covenants"
-                  ? "bg-slate-800 text-emerald-400 shadow-sm font-semibold"
-                  : "text-slate-400 hover:text-slate-200"
-              }`}
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              <span>M&A Covenants</span>
-            </button>
-          </div>
+        {/* Right: Actions */}
+        <div className="flex items-center space-x-2">
+          {/* Export Diligence Memo */}
+          <button
+            id="export-memo-btn"
+            type="button"
+            onClick={onExportMemo}
+            className="hidden sm:inline-flex items-center space-x-1.5 rounded-md border border-zinc-800 bg-zinc-900/80 px-2.5 py-1.5 text-xs font-medium text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100 transition"
+          >
+            <Download className="h-3.5 w-3.5 text-zinc-400" />
+            <span>Export Memo</span>
+          </button>
 
-          {/* Load Sample Deal Action */}
+          {/* Load Sample Deal (Institutional White Button) */}
           <Button
             id="load-sample-deal-btn"
-            variant="deal"
+            type="button"
             size="sm"
             onClick={onLoadSampleDeal}
             disabled={isLoading}
-            className="hidden sm:flex items-center space-x-1.5"
+            className="h-8 rounded-md bg-zinc-100 text-zinc-950 hover:bg-white font-medium px-3 text-xs shadow-sm transition border border-transparent"
           >
-            <Sparkles className="h-3.5 w-3.5" />
-            <span className="font-semibold text-xs">Load Sample Deal</span>
+            <span>Load Sample Deal</span>
           </Button>
+
+          {/* API Docs Link */}
+          <a
+            href="http://localhost:8000/docs"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="FastAPI Swagger Documentation"
+            className="hidden xl:inline-flex items-center space-x-1 rounded-md border border-zinc-800 bg-zinc-900/80 px-2 py-1.5 text-xs text-zinc-400 hover:text-zinc-200 transition"
+          >
+            <BookOpen className="h-3.5 w-3.5" />
+            <span className="font-mono text-[11px]">API</span>
+          </a>
+
+          {/* GitHub Link */}
+          <a
+            href="https://github.com/avrahx/EdgarDiff"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="View Source on GitHub"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-zinc-800 bg-zinc-900/80 text-zinc-400 hover:text-zinc-100 transition"
+          >
+            <svg
+              className="h-4 w-4 fill-current"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                fillRule="evenodd"
+                clipRule="evenodd"
+                d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
+              />
+            </svg>
+          </a>
         </div>
       </div>
     </header>

@@ -6,17 +6,16 @@ import { VarianceDiffView } from "@/components/VarianceDiffView";
 import { CovenantsView } from "@/components/CovenantsView";
 import { DiffResponse, SampleDealData } from "@/types";
 import { SAMPLE_DEAL_MSFT_ATVI, SAMPLE_DIFF_AAPL } from "@/lib/sampleData";
-import { Loader2 } from "lucide-react";
 
 const API_BASE = "http://localhost:8000/api";
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<"diff" | "covenants">("diff");
-  const [ticker, setTicker] = useState("AAPL");
-  const [activeSection, setActiveSection] = useState("item_1a");
+  const [activeTab, setActiveTab] = useState<"covenants" | "diff">("covenants");
+  const [ticker, setTicker] = useState("MSFT");
+  const [activeSection, setActiveSection] = useState("item_7");
   const [isBackendOnline, setIsBackendOnline] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [notification, setNotification] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const [diffData, setDiffData] = useState<DiffResponse>(SAMPLE_DIFF_AAPL);
   const [dealData, setDealData] = useState<SampleDealData>(SAMPLE_DEAL_MSFT_ATVI);
@@ -37,19 +36,17 @@ export default function Home() {
           }
         }
       } catch {
-        console.warn("Backend not reachable yet; running in cached client mode.");
         setIsBackendOnline(false);
       }
     }
     checkHealth();
   }, []);
 
-  // Show temporary toast/notification
-  const triggerNotification = (msg: string) => {
-    setNotification(msg);
+  const triggerToast = (msg: string) => {
+    setToastMessage(msg);
     setTimeout(() => {
-      setNotification(null);
-    }, 4000);
+      setToastMessage(null);
+    }, 3500);
   };
 
   // Load sample deal (MSFT / ATVI)
@@ -59,22 +56,27 @@ export default function Home() {
       const res = await fetch(`${API_BASE}/demo/sample-deal`);
       if (res.ok) {
         const data = await res.json();
-        setDealData(data);
+        // Merge enriched structured covenants with backend deal data
+        setDealData({
+          ...SAMPLE_DEAL_MSFT_ATVI,
+          ...data,
+          structured_covenants: SAMPLE_DEAL_MSFT_ATVI.structured_covenants,
+          agreement_sections: SAMPLE_DEAL_MSFT_ATVI.agreement_sections,
+        });
         setActiveTab("covenants");
-        setTicker(data.filing_reference?.ticker || "ATVI");
-        triggerNotification("Loaded landmark MSFT / ATVI deal covenants from API!");
+        setTicker("ATVI");
+        triggerToast("Loaded definitive merger agreement for MSFT / ATVI.");
       } else {
-        // Fallback to rich client sample data
         setDealData(SAMPLE_DEAL_MSFT_ATVI);
         setActiveTab("covenants");
         setTicker("ATVI");
-        triggerNotification("Loaded landmark MSFT / ATVI deal from local cache.");
+        triggerToast("Loaded MSFT / ATVI covenants from local cache.");
       }
     } catch {
       setDealData(SAMPLE_DEAL_MSFT_ATVI);
       setActiveTab("covenants");
       setTicker("ATVI");
-      triggerNotification("Loaded landmark MSFT / ATVI deal covenants.");
+      triggerToast("Loaded MSFT / ATVI covenants from local cache.");
     } finally {
       setIsLoading(false);
     }
@@ -99,15 +101,14 @@ export default function Home() {
       if (res.ok) {
         const data = await res.json();
         setDiffData(data);
-        triggerNotification(`Loaded 10-K variance analysis for ${sym} (FY23 vs FY24).`);
+        triggerToast(`Loaded 10-K variance analysis for ${sym} (FY23 vs FY24).`);
       } else {
-        // Generate simulated responsive diff for searched ticker
         setDiffData({
           ...SAMPLE_DIFF_AAPL,
           ticker: sym,
           section: sectionKey,
         });
-        triggerNotification(`Loaded cached 10-K variance for ${sym}.`);
+        triggerToast(`Loaded cached 10-K variance for ${sym}.`);
       }
     } catch {
       setDiffData({
@@ -115,21 +116,21 @@ export default function Home() {
         ticker: sym,
         section: sectionKey,
       });
-      triggerNotification(`Loaded 10-K variance for ${sym}.`);
+      triggerToast(`Loaded cached 10-K variance for ${sym}.`);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleSearch = (newTicker: string) => {
-    setTicker(newTicker);
+  const handleSearch = (query: string) => {
+    setTicker(query);
     if (activeTab === "diff") {
-      handleFetchDiff(newTicker, activeSection);
+      handleFetchDiff(query, activeSection);
     } else {
-      if (newTicker === "ATVI" || newTicker === "MSFT") {
+      if (query === "ATVI" || query === "MSFT") {
         handleLoadSampleDeal();
       } else {
-        triggerNotification(`Covenants for ${newTicker} extracted from latest merger filings.`);
+        triggerToast(`Extracted definitive covenants for ${query}.`);
       }
     }
   };
@@ -139,62 +140,159 @@ export default function Home() {
     handleFetchDiff(ticker, section);
   };
 
+  // One-click Export Diligence Memo (Markdown)
+  const handleExportMemo = () => {
+    let memoContent = "";
+
+    if (activeTab === "covenants") {
+      memoContent = `# M&A TRANSACTION LEGAL & COVENANT DILIGENCE MEMORANDUM
+**Deal**: ${dealData.deal_name}
+**Structure**: ${dealData.transaction_type}
+**Announcement Date**: ${dealData.announcement_date}
+**Primary SEC Filing**: ${dealData.filing_reference.form} (ACC: ${dealData.filing_reference.accession_number})
+**Source URL**: ${dealData.filing_reference.document_url}
+
+---
+
+## 1. Executive Valuation Summary
+- **Enterprise Value**: $${((dealData.valuation.enterprise_value || 0) / 1e9).toFixed(2)}B
+- **Per Share Offer Price**: $${dealData.valuation.per_share_offer_price_usd?.toFixed(2)} (${dealData.parties.deal_type.toUpperCase()})
+- **Unaffected Share Premium**: +${dealData.valuation.premium_to_unaffected_share_price_percent}%
+- **Implied EBITDA Multiple**: ${dealData.valuation.implied_ebitda_multiple}x
+- **Covenant Risk Grade**: ${dealData.strategic_analysis.covenant_risk_grade}
+
+---
+
+## 2. Key Transaction Covenants & Deal Protections
+
+${dealData.structured_covenants
+  .map(
+    (c) => `### ${c.name}
+- **Metric**: ${c.metric}
+- **SEC Section**: ${c.sec_section}
+- **Confidence Score**: ${c.confidence_score}% (Verified SEC Citation)
+- **Summary**: ${c.summary}
+- **Statutory Quote**: 
+  > "${c.statutory_quote}"
+- **Legal Implication**: ${c.risk_implication}
+`
+  )
+  .join("\n")}
+
+---
+
+## 3. Regulatory & Antitrust Strategic Assessment
+- **Deal Thesis**: ${dealData.strategic_analysis.deal_thesis}
+- **Antitrust Posture**: ${dealData.strategic_analysis.antitrust_posture}
+- **MAE Legal Standard**: ${dealData.strategic_analysis.mae_standard}
+
+*Generated via EdgarDiff Institutional Engine*
+`;
+    } else {
+      memoContent = `# 10-K NARRATIVE VARIANCE & MD&A AUDIT MEMORANDUM
+**Company**: ${diffData.ticker}
+**Comparative Period**: FY ${diffData.year_1} vs. FY ${diffData.year_2} Form 10-K (${diffData.section.toUpperCase()})
+**Net Paragraph Shift Score**: ${diffData.materiality_score}%
+**Risk Posture Assessment**: ${diffData.variance_summary.risk_posture_shift}
+
+---
+
+## 1. Executive Summary of Strategic Shifts
+${diffData.variance_summary.executive_summary}
+
+---
+
+## 2. Top Strategic Narrative Shifts
+${diffData.variance_summary.top_strategic_changes
+  .map(
+    (s, idx) => `### Shift ${idx + 1}: ${s.theme} [${s.type.toUpperCase()}]
+- **Analysis**: ${s.analysis}
+- **Exact Verbatim Snippet**:
+  > "${s.snippet_reference}"
+`
+  )
+  .join("\n")}
+
+---
+
+## 3. Footnote & Liquidity Anomaly Flags
+${
+  diffData.variance_summary.anomaly_flags
+    ?.map(
+      (a) => `- **[${a.category.toUpperCase()}] ${a.title}** (${a.severity.toUpperCase()} SEVERITY): ${a.detail}`
+    )
+    .join("\n") || "No anomaly flags identified."
+}
+
+*Generated via EdgarDiff Institutional Engine*
+`;
+    }
+
+    const blob = new Blob([memoContent], { type: "text/markdown;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute(
+      "download",
+      `edgardiff_${activeTab === "covenants" ? "deal_covenants" : "10k_variance"}_${
+        activeTab === "covenants" ? dealData.filing_reference.ticker : diffData.ticker
+      }.md`
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    triggerToast("Exported Diligence Memo (.md) to your downloads folder.");
+  };
+
   return (
-    <div className="min-h-screen bg-[#080c14] text-slate-100 flex flex-col font-sans">
-      {/* Top Navigation Bar */}
+    <div className="min-h-screen bg-[#090a0c] text-zinc-100 flex flex-col font-sans selection:bg-sky-500/20 selection:text-sky-200 antialiased">
+      {/* Top Shell Navigation */}
       <TopBar
         activeTab={activeTab}
         onTabChange={setActiveTab}
         ticker={ticker}
-        onTickerChange={setTicker}
         onSearch={handleSearch}
         onLoadSampleDeal={handleLoadSampleDeal}
+        onExportMemo={handleExportMemo}
         isBackendOnline={isBackendOnline}
         isLoading={isLoading}
       />
 
-      {/* Floating Notification Toast */}
-      {notification && (
-        <div className="fixed bottom-5 right-5 z-50 flex items-center space-x-2 rounded-lg border border-emerald-500/40 bg-slate-900/95 px-4 py-2.5 shadow-2xl backdrop-blur-md animate-in fade-in slide-in-from-bottom-3 duration-200">
-          <div className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
-          <span className="text-xs font-mono text-emerald-300">{notification}</span>
+      {/* Floating Action Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-4 right-4 z-50 flex items-center space-x-2 rounded-md border border-zinc-700 bg-zinc-900/95 px-3.5 py-2 shadow-2xl backdrop-blur-md text-xs font-mono text-zinc-200">
+          <span className="h-1.5 w-1.5 rounded-full bg-sky-400 animate-pulse" />
+          <span>{toastMessage}</span>
         </div>
       )}
 
-      {/* Main Content Body */}
-      <main className="flex-1 mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        {isLoading && (
-          <div className="mb-4 flex items-center space-x-2 rounded-lg border border-emerald-500/30 bg-emerald-950/20 px-4 py-2 text-xs font-mono text-emerald-300">
-            <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-400" />
-            <span>Processing SEC filings & synthesizing variance data...</span>
-          </div>
-        )}
-
-        {activeTab === "diff" ? (
+      {/* Main Container */}
+      <main className="flex-1 mx-auto w-full max-w-[1720px] px-4 py-4 sm:px-6">
+        {activeTab === "covenants" ? (
+          <CovenantsView dealData={dealData} isLoading={isLoading} />
+        ) : (
           <VarianceDiffView
             data={diffData}
             activeSection={activeSection}
             onSectionChange={handleSectionChange}
             isLoading={isLoading}
           />
-        ) : (
-          <CovenantsView dealData={dealData} isLoading={isLoading} />
         )}
       </main>
 
       {/* Institutional Footer */}
-      <footer className="border-t border-slate-900 bg-slate-950/80 py-4 font-mono text-[11px] text-slate-500">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-4 sm:flex-row sm:px-6 lg:px-8">
-          <div className="flex items-center space-x-2">
-            <span className="font-bold text-slate-400">EdgarDiff</span>
-            <span>•</span>
-            <span>SEC EDGAR Fair-Access Compliance Engine</span>
-          </div>
-          <div className="flex items-center space-x-4">
-            <span className="text-slate-600">FastAPI backend on :8000</span>
-            <span>•</span>
-            <span className="text-emerald-500/80">Next.js 14 App Router</span>
-          </div>
+      <footer className="h-10 border-t border-zinc-900 bg-[#090a0c] px-4 sm:px-6 flex items-center justify-between text-[11px] font-mono text-zinc-500">
+        <div className="flex items-center space-x-3">
+          <span className="font-semibold text-zinc-400">EDGAR{" // "}DIFF</span>
+          <span>•</span>
+          <span>SEC Fair-Access Compliance Engine</span>
+          <span>•</span>
+          <span className="text-zinc-600">CIK / Accession Verification Engine</span>
+        </div>
+        <div className="flex items-center space-x-3">
+          <span className="text-zinc-600">FastAPI :8000</span>
+          <span>•</span>
+          <span className="text-zinc-400">Next.js 14 App Router</span>
         </div>
       </footer>
     </div>

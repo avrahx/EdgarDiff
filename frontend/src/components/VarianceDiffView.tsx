@@ -3,13 +3,11 @@
 import React, { useState } from "react";
 import {
   Sparkles,
-  ArrowRight,
   Quote,
+  AlertTriangle,
 } from "lucide-react";
-import { DiffResponse, StrategicChange } from "@/types";
-import { Badge } from "@/components/ui/badge";
+import { DiffResponse, StrategicChange, AnomalyFlag } from "@/types";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   Sheet,
   SheetContent,
@@ -26,16 +24,17 @@ interface VarianceDiffViewProps {
   isLoading?: boolean;
 }
 
-const SECTION_LABELS: Record<string, string> = {
-  item_1a: "Item 1A: Risk Factors",
-  item_7: "Item 7: MD&A",
-  item_8: "Item 8: Financial Statements",
-};
+const SECTION_OPTIONS = [
+  { key: "item_7", label: "Item 7: MD&A" },
+  { key: "item_1a", label: "Item 1A: Risk Factors" },
+  { key: "item_8", label: "Item 8: Financial Statements" },
+];
 
 export function VarianceDiffView({
   data,
   activeSection,
   onSectionChange,
+  isLoading = false,
 }: VarianceDiffViewProps) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [filterType, setFilterType] = useState<"all" | "changes_only">("all");
@@ -46,6 +45,9 @@ export function VarianceDiffView({
     year_1,
     year_2,
     materiality_score,
+    introduced_risk_count = 6,
+    omitted_clause_count = 2,
+    unchanged_clause_count = 18,
     variance_summary,
     diff_blocks = [],
   } = data;
@@ -57,106 +59,61 @@ export function VarianceDiffView({
     return true;
   });
 
-  const additionsCount = diff_blocks.filter((b) => b.status === "added").length;
-  const removalsCount = diff_blocks.filter((b) => b.status === "removed").length;
-  const modifiedCount = diff_blocks.filter((b) => b.status === "modified").length;
-  const unchangedCount = diff_blocks.filter((b) => b.status === "unchanged").length;
-
-  const getScoreBadge = (score: number) => {
-    if (score >= 65) {
-      return {
-        variant: "destructive" as const,
-        label: "High Materiality / Strategic Shift",
-        color: "text-rose-400 bg-rose-950/40 border-rose-800/60",
-      };
-    }
-    if (score >= 35) {
-      return {
-        variant: "warning" as const,
-        label: "Moderate Narrative Evolution",
-        color: "text-amber-400 bg-amber-950/40 border-amber-800/60",
-      };
-    }
-    return {
-      variant: "success" as const,
-      label: "Routine / Minor Variance",
-      color: "text-emerald-400 bg-emerald-950/40 border-emerald-800/60",
-    };
-  };
-
-  const scoreInfo = getScoreBadge(materiality_score);
+  if (isLoading) {
+    return (
+      <div className="space-y-4 animate-pulse">
+        <div className="h-16 rounded-md bg-zinc-900/60 border border-zinc-800/80" />
+        <div className="h-12 rounded-md bg-zinc-900/60 border border-zinc-800/80" />
+        <div className="h-[600px] rounded-md bg-zinc-900/60 border border-zinc-800/80" />
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      {/* Top Controls & KPI Ribbon */}
-      <div className="flex flex-col gap-4 rounded-xl border border-slate-800 bg-slate-900/60 p-4 backdrop-blur-md lg:flex-row lg:items-center lg:justify-between">
-        {/* Section Tabs */}
-        <div className="flex flex-wrap items-center gap-2">
-          {Object.entries(SECTION_LABELS).map(([key, label]) => (
-            <button
-              key={key}
-              id={`section-tab-${key}`}
-              onClick={() => onSectionChange(key)}
-              className={`rounded-lg px-3 py-2 text-xs font-mono font-medium transition ${
-                activeSection === key
-                  ? "bg-emerald-600 text-white shadow-md shadow-emerald-950/50"
-                  : "bg-slate-800/80 text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-slate-700/60"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
+    <div className="space-y-4">
+      {/* Top Meta Header & Section Control */}
+      <div className="flex flex-col gap-3 rounded-md border border-zinc-800/80 bg-zinc-950/60 p-3 sm:flex-row sm:items-center sm:justify-between text-xs font-mono">
+        {/* Comparative Period Title */}
+        <div className="flex items-center space-x-3">
+          <span className="font-bold text-zinc-100 uppercase tracking-tight">
+            {ticker} COMPARATIVE PERIOD:
+          </span>
+          <span className="rounded bg-zinc-900 px-2 py-0.5 text-zinc-300 border border-zinc-800">
+            FY {year_1} vs. FY {year_2} Form 10-K
+          </span>
         </div>
 
-        {/* Center: Shift Score Meter */}
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-3 rounded-lg border border-slate-800 bg-slate-950/80 px-3.5 py-2">
-            <div className="flex flex-col">
-              <span className="text-[10px] uppercase font-mono tracking-wider text-slate-400">
-                Materiality Score
-              </span>
-              <div className="flex items-baseline space-x-1.5">
-                <span className="text-xl font-bold font-mono text-white">
-                  {materiality_score}
-                </span>
-                <span className="text-xs font-mono text-slate-500">/ 100</span>
-              </div>
-            </div>
-
-            {/* Score progress mini bar */}
-            <div className="w-24 bg-slate-800 h-2 rounded-full overflow-hidden">
-              <div
-                className={`h-full rounded-full ${
-                  materiality_score >= 65
-                    ? "bg-rose-500"
-                    : materiality_score >= 35
-                    ? "bg-amber-500"
-                    : "bg-emerald-500"
+        {/* Section Selector & Drawer Toggle */}
+        <div className="flex items-center space-x-2">
+          <div className="flex items-center rounded border border-zinc-800 bg-zinc-900/80 p-0.5">
+            {SECTION_OPTIONS.map((sec) => (
+              <button
+                key={sec.key}
+                type="button"
+                id={`section-tab-${sec.key}`}
+                onClick={() => onSectionChange(sec.key)}
+                className={`rounded px-2.5 py-1 text-[11px] font-medium transition ${
+                  activeSection === sec.key
+                    ? "bg-zinc-800 text-sky-300 font-semibold shadow-sm"
+                    : "text-zinc-400 hover:text-zinc-200"
                 }`}
-                style={{ width: `${Math.min(100, Math.max(5, materiality_score))}%` }}
-              />
-            </div>
-
-            <Badge
-              variant="default"
-              className={`text-[10px] hidden sm:inline-flex ${scoreInfo.color}`}
-            >
-              {scoreInfo.label}
-            </Badge>
+              >
+                {sec.label}
+              </button>
+            ))}
           </div>
 
-          {/* AI Drawer Trigger */}
           <Button
             id="open-ai-drawer-btn"
-            variant="default"
+            type="button"
             size="sm"
             onClick={() => setIsDrawerOpen(true)}
-            className="flex items-center space-x-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-500 hover:to-teal-500"
+            className="h-7 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-[11px] font-mono border border-zinc-700 flex items-center space-x-1.5 px-2.5"
           >
-            <Sparkles className="h-4 w-4" />
-            <span className="font-semibold text-xs">AI Analyst Shifts</span>
+            <Sparkles className="h-3.5 w-3.5 text-sky-400" />
+            <span>AI Investment Memo</span>
             {variance_summary?.top_strategic_changes?.length > 0 && (
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-950 text-[11px] font-mono text-emerald-300 border border-emerald-400/40">
+              <span className="rounded bg-zinc-950 px-1 py-0.2 text-[10px] text-sky-300 border border-zinc-800">
                 {variance_summary.top_strategic_changes.length}
               </span>
             )}
@@ -164,238 +121,282 @@ export function VarianceDiffView({
         </div>
       </div>
 
-      {/* Stats and Filter Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-1 text-xs font-mono">
-        <div className="flex items-center space-x-3 text-slate-400">
-          <span className="font-semibold text-slate-300">
-            {ticker} 10-K YoY Diff:
+      {/* Metric Bar (Junior.ai / Hebbia style) */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 font-mono">
+        <div className="rounded-md border border-zinc-800/80 bg-zinc-900/60 p-3">
+          <span className="text-[10px] uppercase tracking-wider text-zinc-500">
+            Net Shift Score
           </span>
-          <span className="rounded bg-slate-800 px-2 py-0.5 text-slate-200">
-            FY{year_1}
-          </span>
-          <ArrowRight className="h-3 w-3 text-slate-500" />
-          <span className="rounded bg-slate-800 px-2 py-0.5 text-slate-200">
-            FY{year_2}
-          </span>
+          <div className="mt-1 flex items-baseline space-x-1.5">
+            <span className="text-xl font-bold text-zinc-100">
+              {materiality_score.toFixed(1)}%
+            </span>
+            <span className="text-[10px] text-amber-400">Material Narrative Drift</span>
+          </div>
         </div>
 
-        <div className="flex items-center space-x-2">
-          <span className="inline-flex items-center gap-1 text-[11px] text-emerald-400 bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-800/40">
-            +{additionsCount} Additions
+        <div className="rounded-md border border-zinc-800/80 bg-zinc-900/60 p-3">
+          <span className="text-[10px] uppercase tracking-wider text-zinc-500">
+            Introduced Risk Topics
           </span>
-          <span className="inline-flex items-center gap-1 text-[11px] text-rose-400 bg-rose-950/40 px-2 py-0.5 rounded border border-rose-800/40">
-            -{removalsCount} Removals
-          </span>
-          <span className="inline-flex items-center gap-1 text-[11px] text-amber-400 bg-amber-950/40 px-2 py-0.5 rounded border border-amber-800/40">
-            ~{modifiedCount} Modified
-          </span>
-          <span className="inline-flex items-center gap-1 text-[11px] text-slate-400 bg-slate-800/40 px-2 py-0.5 rounded border border-slate-700/40">
-            {unchangedCount} Unchanged
-          </span>
+          <div className="mt-1 flex items-baseline space-x-1.5">
+            <span className="text-xl font-bold text-emerald-400">
+              +{introduced_risk_count}
+            </span>
+            <span className="text-[10px] text-zinc-500">New Disclosures</span>
+          </div>
+        </div>
 
-          <div className="ml-3 pl-3 border-l border-slate-800 flex items-center space-x-1">
-            <button
-              id="filter-toggle-all"
-              onClick={() => setFilterType("all")}
-              className={`px-2 py-0.5 rounded text-[10px] ${
-                filterType === "all"
-                  ? "bg-slate-700 text-white"
-                  : "text-slate-400 hover:text-slate-200"
-              }`}
-            >
-              All
-            </button>
-            <button
-              id="filter-toggle-changes"
-              onClick={() => setFilterType("changes_only")}
-              className={`px-2 py-0.5 rounded text-[10px] ${
-                filterType === "changes_only"
-                  ? "bg-slate-700 text-white font-semibold"
-                  : "text-slate-400 hover:text-slate-200"
-              }`}
-            >
-              Changes Only
-            </button>
+        <div className="rounded-md border border-zinc-800/80 bg-zinc-900/60 p-3">
+          <span className="text-[10px] uppercase tracking-wider text-zinc-500">
+            Omitted Clauses
+          </span>
+          <div className="mt-1 flex items-baseline space-x-1.5">
+            <span className="text-xl font-bold text-rose-400">
+              -{omitted_clause_count}
+            </span>
+            <span className="text-[10px] text-zinc-500">Deprecated Disclaimers</span>
+          </div>
+        </div>
+
+        <div className="rounded-md border border-zinc-800/80 bg-zinc-900/60 p-3">
+          <span className="text-[10px] uppercase tracking-wider text-zinc-500">
+            Unchanged Clauses
+          </span>
+          <div className="mt-1 flex items-baseline space-x-1.5">
+            <span className="text-xl font-bold text-zinc-300">
+              {unchanged_clause_count}
+            </span>
+            <span className="text-[10px] text-zinc-500">Static Boilerplate</span>
           </div>
         </div>
       </div>
 
-      {/* Split-screen Diff Reader */}
-      <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-950 shadow-xl">
-        {/* Column Headers */}
-        <div className="grid grid-cols-1 divide-y divide-slate-800 border-b border-slate-800 bg-slate-900/90 font-mono text-xs md:grid-cols-2 md:divide-y-0 md:divide-x">
-          <div className="flex items-center justify-between px-4 py-2.5 text-slate-300">
-            <div className="flex items-center space-x-2">
-              <span className="font-bold text-slate-200">PRIOR YEAR:</span>
-              <Badge variant="secondary" className="font-mono text-[11px]">
-                FY{year_1}
-              </Badge>
-            </div>
-            <span className="text-[11px] text-slate-500">Deletions / Baseline</span>
+      {/* Two-Column Code-Review Style Split Diff */}
+      <div className="rounded-md border border-zinc-800/80 bg-[#0c0e14] shadow-md overflow-hidden">
+        {/* Table Control Bar */}
+        <div className="flex items-center justify-between border-b border-zinc-800 bg-zinc-950/90 px-4 py-2 font-mono text-xs">
+          <div className="flex items-center space-x-4">
+            <span className="font-semibold text-zinc-300">
+              CODE-REVIEW SPLIT DIFF (MD&A / 10-K)
+            </span>
           </div>
-          <div className="flex items-center justify-between px-4 py-2.5 text-slate-300">
-            <div className="flex items-center space-x-2">
-              <span className="font-bold text-emerald-400">REPORTING YEAR:</span>
-              <Badge variant="success" className="font-mono text-[11px]">
-                FY{year_2}
-              </Badge>
+
+          <div className="flex items-center space-x-2">
+            <span className="text-zinc-500 text-[11px]">Filter:</span>
+            <div className="flex items-center rounded border border-zinc-800 bg-zinc-900 p-0.5 text-[11px]">
+              <button
+                type="button"
+                id="filter-toggle-all"
+                onClick={() => setFilterType("all")}
+                className={`px-2 py-0.5 rounded transition ${
+                  filterType === "all"
+                    ? "bg-zinc-800 text-zinc-100 font-semibold"
+                    : "text-zinc-400 hover:text-zinc-200"
+                }`}
+              >
+                All Clauses
+              </button>
+              <button
+                type="button"
+                id="filter-toggle-changes"
+                onClick={() => setFilterType("changes_only")}
+                className={`px-2 py-0.5 rounded transition ${
+                  filterType === "changes_only"
+                    ? "bg-zinc-800 text-sky-300 font-semibold"
+                    : "text-zinc-400 hover:text-zinc-200"
+                }`}
+              >
+                Changes Only
+              </button>
             </div>
-            <span className="text-[11px] text-emerald-500/80">Additions / Revisions</span>
+          </div>
+        </div>
+
+        {/* Dual Column Headers */}
+        <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-zinc-800 border-b border-zinc-800/80 bg-zinc-900/40 text-xs font-mono">
+          <div className="flex items-center justify-between px-4 py-2 text-zinc-400">
+            <div className="flex items-center space-x-2">
+              <span className="text-zinc-500">BASE:</span>
+              <span className="font-bold text-zinc-300">FY {year_1} (10-K Prior Year)</span>
+            </div>
+            <span className="text-[11px] text-zinc-600">Deletions</span>
+          </div>
+
+          <div className="flex items-center justify-between px-4 py-2 text-zinc-400">
+            <div className="flex items-center space-x-2">
+              <span className="text-sky-400">CURRENT:</span>
+              <span className="font-bold text-zinc-100">FY {year_2} (10-K Reporting Year)</span>
+            </div>
+            <span className="text-[11px] text-sky-400/70">Additions / Revisions</span>
           </div>
         </div>
 
         {/* Diff Rows */}
-        <div className="divide-y divide-slate-800/80 max-h-[720px] overflow-y-auto">
-          {filteredBlocks.length === 0 ? (
-            <div className="p-12 text-center text-slate-400 font-mono text-xs">
-              No differences matching the selected filter.
-            </div>
-          ) : (
-            filteredBlocks.map((block, idx) => {
-              const status = block.status;
+        <div className="divide-y divide-zinc-800/60 max-h-[700px] overflow-y-auto">
+          {filteredBlocks.map((block, idx) => {
+            const status = block.status;
 
-              return (
-                <div
-                  key={idx}
-                  id={`diff-block-${idx}`}
-                  className={`grid grid-cols-1 md:grid-cols-2 md:divide-x divide-slate-800 transition-colors ${
-                    status === "added"
-                      ? "bg-emerald-950/15 hover:bg-emerald-950/25"
-                      : status === "removed"
-                      ? "bg-rose-950/15 hover:bg-rose-950/25"
-                      : status === "modified"
-                      ? "bg-amber-950/15 hover:bg-amber-950/25"
-                      : "hover:bg-slate-900/40"
-                  }`}
-                >
-                  {/* Left Column (Old / Year 1) */}
-                  <div className="relative p-4 text-xs">
-                    {/* Status marker */}
-                    <div className="mb-2 flex items-center justify-between font-mono text-[10px] text-slate-400">
-                      <span className="text-slate-500">Block #{idx + 1}</span>
-                      {status === "removed" && (
-                        <span className="rounded bg-rose-950/60 px-1.5 py-0.5 font-bold text-rose-300 border border-rose-800/50">
-                          - REMOVED
-                        </span>
-                      )}
-                      {status === "modified" && (
-                        <span className="rounded bg-amber-950/60 px-1.5 py-0.5 text-amber-300 border border-amber-800/50">
-                          ~ ORIGINAL ({Math.round(block.similarity * 100)}% match)
-                        </span>
-                      )}
-                    </div>
+            return (
+              <div
+                key={block.id || idx}
+                id={`diff-row-${idx}`}
+                className={`grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-zinc-800/60 transition-colors ${
+                  status === "added"
+                    ? "bg-emerald-950/15 hover:bg-emerald-950/25"
+                    : status === "removed"
+                    ? "bg-rose-950/15 hover:bg-rose-950/25"
+                    : status === "modified"
+                    ? "bg-amber-950/15 hover:bg-amber-950/25"
+                    : "hover:bg-zinc-900/30"
+                }`}
+              >
+                {/* Left Column (Old / Year 1) */}
+                <div className="flex p-3 text-xs">
+                  {/* Gutter number */}
+                  <div className="w-9 shrink-0 select-none font-mono text-[11px] text-zinc-600 text-right pr-3 pt-0.5">
+                    {block.old_para_num ? `¶ ${String(block.old_para_num).padStart(2, "0")}` : "---"}
+                  </div>
 
+                  {/* Content */}
+                  <div className="flex-1 overflow-hidden">
                     {block.old_text ? (
                       <div
                         className={
                           status === "removed"
-                            ? "border-l-2 border-rose-500 pl-3 text-rose-200/90 font-sans leading-relaxed"
+                            ? "border-l-2 border-rose-500/80 pl-2.5 text-rose-200/90 font-sans leading-relaxed"
                             : status === "modified"
-                            ? "border-l-2 border-amber-500/60 pl-3 text-slate-300 font-sans leading-relaxed"
-                            : "pl-3 text-slate-300 font-sans leading-relaxed"
+                            ? "border-l-2 border-zinc-700 pl-2.5 text-zinc-400 font-sans leading-relaxed"
+                            : "pl-2.5 text-zinc-400 font-sans leading-relaxed"
                         }
                       >
                         <MarkdownContent content={block.old_text} />
                       </div>
                     ) : (
-                      <div className="flex h-16 items-center justify-center rounded border border-dashed border-slate-800 text-[11px] font-mono italic text-slate-600">
-                        (Clause did not exist in FY{year_1})
+                      <div className="flex h-12 items-center justify-center rounded border border-dashed border-zinc-800/70 text-[10px] font-mono italic text-zinc-700">
+                        (Not present in FY {year_1})
                       </div>
                     )}
                   </div>
+                </div>
 
-                  {/* Right Column (New / Year 2) */}
-                  <div className="relative p-4 text-xs">
-                    {/* Status marker */}
-                    <div className="mb-2 flex items-center justify-between font-mono text-[10px] text-slate-400">
-                      <span className="text-slate-500">FY{year_2} Clause</span>
-                      {status === "added" && (
-                        <span className="rounded bg-emerald-950/60 px-1.5 py-0.5 font-bold text-emerald-300 border border-emerald-800/50">
-                          + ADDED
-                        </span>
-                      )}
-                      {status === "modified" && (
-                        <span className="rounded bg-amber-950/60 px-1.5 py-0.5 font-bold text-amber-300 border border-amber-800/50">
-                          ~ REVISED (+{block.shift_score} shift)
-                        </span>
-                      )}
-                      {status === "unchanged" && (
-                        <span className="text-[10px] font-mono text-slate-600">
-                          IDENTICAL
-                        </span>
-                      )}
-                    </div>
+                {/* Right Column (New / Year 2) */}
+                <div className="flex p-3 text-xs">
+                  {/* Gutter number */}
+                  <div className="w-9 shrink-0 select-none font-mono text-[11px] text-zinc-600 text-right pr-3 pt-0.5">
+                    {block.new_para_num ? `¶ ${String(block.new_para_num).padStart(2, "0")}` : "---"}
+                  </div>
 
+                  {/* Content */}
+                  <div className="flex-1 overflow-hidden">
                     {block.new_text ? (
                       <div
                         className={
                           status === "added"
-                            ? "border-l-2 border-emerald-500 pl-3 text-emerald-200 font-sans leading-relaxed"
+                            ? "border-l-2 border-emerald-500/80 pl-2.5 text-emerald-100 font-sans leading-relaxed"
                             : status === "modified"
-                            ? "border-l-2 border-amber-500 pl-3 text-emerald-100 font-sans leading-relaxed"
-                            : "pl-3 text-slate-300 font-sans leading-relaxed"
+                            ? "border-l-2 border-amber-500/80 pl-2.5 text-zinc-100 font-sans leading-relaxed"
+                            : "pl-2.5 text-zinc-300 font-sans leading-relaxed"
                         }
                       >
                         <MarkdownContent content={block.new_text} />
                       </div>
                     ) : (
-                      <div className="flex h-16 items-center justify-center rounded border border-dashed border-slate-800 text-[11px] font-mono italic text-slate-600">
-                        (Clause omitted in FY{year_2})
+                      <div className="flex h-12 items-center justify-center rounded border border-dashed border-zinc-800/70 text-[10px] font-mono italic text-zinc-700">
+                        (Omitted in FY {year_2})
                       </div>
                     )}
                   </div>
                 </div>
-              );
-            })
-          )}
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      {/* Right-hand Sheet Drawer: AI Analyst Summary of Narrative Shifts */}
+      {/* Floating / Docked Right Drawer: "AI Investment Memo Synthesis" */}
       <Sheet open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
         <SheetContent
-          id="ai-analyst-drawer"
+          id="ai-investment-memo-drawer"
           side="right"
-          className="w-full sm:max-w-xl md:max-w-2xl bg-slate-950/98 border-slate-800 text-slate-100"
+          className="w-full sm:max-w-xl md:max-w-2xl bg-[#090a0c] border-zinc-800 text-zinc-100 p-6 overflow-y-auto"
         >
           <SheetHeader>
-            <div className="flex items-center space-x-2 text-emerald-400">
-              <Sparkles className="h-5 w-5" />
-              <SheetTitle className="text-lg font-bold font-mono text-white">
-                AI Equity Analyst Synthesis
+            <div className="flex items-center space-x-2 text-sky-400">
+              <Sparkles className="h-4 w-4" />
+              <SheetTitle className="text-base font-bold font-mono text-zinc-100">
+                AI Investment Memo Synthesis
               </SheetTitle>
             </div>
-            <SheetDescription className="text-xs text-slate-400">
-              Quantitative variance breakdown and strategic narrative trajectory for{" "}
-              <strong className="text-slate-200">{ticker}</strong> (FY{year_1} vs FY{year_2}).
+            <SheetDescription className="text-xs text-zinc-400 font-sans">
+              Algorithmic synthesis of managerial narrative shift, capital allocation pivots, and risk factor trajectory for{" "}
+              <strong className="text-zinc-200">{ticker}</strong> (FY{year_1} vs FY{year_2}).
             </SheetDescription>
           </SheetHeader>
 
           <div className="mt-6 space-y-6">
-            {/* Risk Posture Card */}
-            <div className="rounded-lg border border-slate-800 bg-slate-900/90 p-4">
+            {/* Executive Synthesis */}
+            <div className="rounded-md border border-zinc-800/80 bg-zinc-900/60 p-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] uppercase font-mono tracking-wider text-slate-400">
-                  Risk Posture Trajectory
+                <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-500 font-semibold">
+                  Risk Posture Assessment
                 </span>
-                <Badge variant="destructive" className="font-mono text-[10px]">
-                  {variance_summary?.risk_posture_shift || "Elevated Regulatory Scrutiny"}
-                </Badge>
+                <span className="rounded bg-rose-500/10 px-2 py-0.5 text-[10px] font-mono text-rose-400 border border-rose-500/20">
+                  {variance_summary?.risk_posture_shift || "Elevated Regulatory Exposure"}
+                </span>
               </div>
-              <p className="text-xs text-slate-300 leading-relaxed font-sans">
-                {variance_summary?.executive_summary ||
-                  "Narrative diff indicates substantial managerial reprioritization regarding supply chain sovereignty, antitrust disclosures, and enterprise AI capital expenditures."}
+              <p className="text-xs text-zinc-300 leading-relaxed font-sans">
+                {variance_summary?.executive_summary}
               </p>
             </div>
 
-            {/* Strategic Changes List */}
+            {/* Footnote & Liquidity Anomaly Flags */}
+            {variance_summary?.anomaly_flags && variance_summary.anomaly_flags.length > 0 && (
+              <div className="space-y-2.5">
+                <div className="flex items-center space-x-2">
+                  <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
+                  <h4 className="text-xs font-mono uppercase tracking-wider text-zinc-300 font-semibold">
+                    Footnote & Liquidity Anomaly Flags
+                  </h4>
+                </div>
+
+                <div className="space-y-2">
+                  {variance_summary.anomaly_flags.map((anomaly: AnomalyFlag, idx: number) => (
+                    <div
+                      key={idx}
+                      className="rounded-md border border-zinc-800/80 bg-zinc-900/40 p-3 text-xs"
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-semibold text-zinc-200 font-mono text-[11px]">
+                          [{anomaly.category.toUpperCase()}] {anomaly.title}
+                        </span>
+                        <span
+                          className={`rounded px-1.5 py-0.2 text-[10px] font-mono uppercase ${
+                            anomaly.severity === "high"
+                              ? "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                              : "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                          }`}
+                        >
+                          {anomaly.severity} Severity
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-zinc-400 leading-relaxed font-sans">
+                        {anomaly.detail}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Strategic Narrative Shifts List */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <h4 className="text-xs font-mono uppercase tracking-wider text-slate-300 font-semibold">
-                  Top Strategic Narrative Shifts ({variance_summary?.top_strategic_changes?.length || 0})
+                <h4 className="text-xs font-mono uppercase tracking-wider text-zinc-300 font-semibold">
+                  Strategic Narrative Shifts ({variance_summary?.top_strategic_changes?.length || 0})
                 </h4>
-                <span className="text-[11px] font-mono text-slate-500">
-                  Click snippet to inspect
+                <span className="text-[10px] font-mono text-zinc-500">
+                  Click to inspect snippet
                 </span>
               </div>
 
@@ -403,58 +404,47 @@ export function VarianceDiffView({
                 const isSelected = selectedSnippet === change.snippet_reference;
 
                 return (
-                  <Card
+                  <div
                     key={idx}
                     id={`strategic-change-card-${idx}`}
-                    className={`cursor-pointer transition-all border ${
-                      isSelected
-                        ? "border-emerald-500 bg-slate-900/90 shadow-lg shadow-emerald-950/30"
-                        : "border-slate-800 hover:border-slate-700 bg-slate-900/60"
-                    }`}
                     onClick={() => setSelectedSnippet(isSelected ? null : change.snippet_reference)}
+                    className={`cursor-pointer rounded-md border p-3.5 transition-all text-xs ${
+                      isSelected
+                        ? "border-sky-400 bg-zinc-900/90 shadow-md shadow-sky-950/20"
+                        : "border-zinc-800/80 bg-zinc-900/40 hover:border-zinc-700 hover:bg-zinc-900/70"
+                    }`}
                   >
-                    <CardHeader className="p-4 pb-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
-                          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-800 text-[10px] font-mono text-slate-300">
-                            {idx + 1}
-                          </span>
-                          <span className="text-xs font-bold text-slate-100 font-sans">
-                            {change.theme}
-                          </span>
-                        </div>
-                        <Badge
-                          variant={
-                            change.type === "added"
-                              ? "success"
-                              : change.type === "removed"
-                              ? "destructive"
-                              : "warning"
-                          }
-                          className="uppercase text-[10px] font-mono"
-                        >
-                          {change.type}
-                        </Badge>
-                      </div>
-                    </CardHeader>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-xs font-bold text-zinc-100 font-sans">
+                        {change.theme}
+                      </span>
+                      <span
+                        className={`rounded px-1.5 py-0.5 text-[10px] font-mono uppercase ${
+                          change.type === "added"
+                            ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                            : change.type === "removed"
+                            ? "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                            : "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                        }`}
+                      >
+                        {change.type}
+                      </span>
+                    </div>
 
-                    <CardContent className="p-4 pt-1 text-xs space-y-3">
-                      <p className="text-slate-300 leading-relaxed font-sans">
-                        {change.analysis}
+                    <p className="text-[11px] text-zinc-400 font-sans leading-relaxed mb-2.5">
+                      {change.analysis}
+                    </p>
+
+                    <div className="rounded border border-zinc-800/80 bg-[#08090c] p-2 text-[10px] font-mono text-zinc-300">
+                      <div className="flex items-center space-x-1 text-zinc-500 mb-0.5">
+                        <Quote className="h-3 w-3 text-sky-400" />
+                        <span>VERBATIM 10-K DISCLOSURE:</span>
+                      </div>
+                      <p className="italic text-zinc-300/90 leading-relaxed">
+                        &ldquo;{change.snippet_reference}&rdquo;
                       </p>
-
-                      {/* Verbatim snippet reference */}
-                      <div className="rounded-md border border-slate-800 bg-slate-950 p-3">
-                        <div className="flex items-center space-x-1 text-[10px] font-mono text-slate-500 mb-1">
-                          <Quote className="h-3 w-3 text-emerald-400" />
-                          <span>FILING CITATION (EXACT SNIPPET):</span>
-                        </div>
-                        <p className="font-mono text-[11px] text-emerald-300/90 italic leading-relaxed">
-                          &ldquo;{change.snippet_reference}&rdquo;
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 );
               })}
             </div>
