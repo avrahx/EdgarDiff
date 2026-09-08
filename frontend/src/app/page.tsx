@@ -4,10 +4,12 @@ import React, { useState, useEffect } from "react";
 import { TopBar } from "@/components/TopBar";
 import { VarianceDiffView } from "@/components/VarianceDiffView";
 import { CovenantsView } from "@/components/CovenantsView";
-import { DiffResponse, SampleDealData } from "@/types";
-import { SAMPLE_DEAL_MSFT_ATVI, SAMPLE_DIFF_AAPL } from "@/lib/sampleData";
+import { DiffResponse, FullSampleDealJson } from "@/types";
+import sampleDealJson from "../../data/sampleDeal.json";
 
 const API_BASE = "http://localhost:8000/api";
+
+const typedSampleDeal: FullSampleDealJson = sampleDealJson as FullSampleDealJson;
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<"covenants" | "diff">("covenants");
@@ -17,8 +19,8 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const [diffData, setDiffData] = useState<DiffResponse>(SAMPLE_DIFF_AAPL);
-  const [dealData, setDealData] = useState<SampleDealData>(SAMPLE_DEAL_MSFT_ATVI);
+  const [dealData, setDealData] = useState<FullSampleDealJson>(typedSampleDeal);
+  const [diffData, setDiffData] = useState<DiffResponse | undefined>(undefined);
 
   // Check backend health on mount
   useEffect(() => {
@@ -56,27 +58,26 @@ export default function Home() {
       const res = await fetch(`${API_BASE}/demo/sample-deal`);
       if (res.ok) {
         const data = await res.json();
-        // Merge enriched structured covenants with backend deal data
-        setDealData({
-          ...SAMPLE_DEAL_MSFT_ATVI,
-          ...data,
-          structured_covenants: SAMPLE_DEAL_MSFT_ATVI.structured_covenants,
-          agreement_sections: SAMPLE_DEAL_MSFT_ATVI.agreement_sections,
-        });
+        // If API returns sampleDeal dataset, use it; otherwise fallback to typedSampleDeal
+        if (data.valuationRibbon && data.covenantsAudit) {
+          setDealData(data as FullSampleDealJson);
+        } else {
+          setDealData(typedSampleDeal);
+        }
         setActiveTab("covenants");
         setTicker("ATVI");
-        triggerToast("Loaded definitive merger agreement for MSFT / ATVI.");
+        triggerToast("Loaded definitive merger agreement for MSFT / ATVI ($68.7B All-Cash).");
       } else {
-        setDealData(SAMPLE_DEAL_MSFT_ATVI);
+        setDealData(typedSampleDeal);
         setActiveTab("covenants");
         setTicker("ATVI");
-        triggerToast("Loaded MSFT / ATVI covenants from local cache.");
+        triggerToast("Loaded MSFT / ATVI covenants from local sample dataset.");
       }
     } catch {
-      setDealData(SAMPLE_DEAL_MSFT_ATVI);
+      setDealData(typedSampleDeal);
       setActiveTab("covenants");
       setTicker("ATVI");
-      triggerToast("Loaded MSFT / ATVI covenants from local cache.");
+      triggerToast("Loaded MSFT / ATVI covenants from local sample dataset.");
     } finally {
       setIsLoading(false);
     }
@@ -92,8 +93,8 @@ export default function Home() {
         body: JSON.stringify({
           ticker: sym,
           form_type: "10-K",
-          year_1: 2023,
-          year_2: 2024,
+          year_1: 2022,
+          year_2: 2023,
           section: sectionKey,
         }),
       });
@@ -101,21 +102,12 @@ export default function Home() {
       if (res.ok) {
         const data = await res.json();
         setDiffData(data);
-        triggerToast(`Loaded 10-K variance analysis for ${sym} (FY23 vs FY24).`);
+        triggerToast(`Loaded 10-K variance analysis for ${sym} (FY22 vs FY23).`);
       } else {
-        setDiffData({
-          ...SAMPLE_DIFF_AAPL,
-          ticker: sym,
-          section: sectionKey,
-        });
+        // Use yoySectionDiff from sample dataset
         triggerToast(`Loaded cached 10-K variance for ${sym}.`);
       }
     } catch {
-      setDiffData({
-        ...SAMPLE_DIFF_AAPL,
-        ticker: sym,
-        section: sectionKey,
-      });
       triggerToast(`Loaded cached 10-K variance for ${sym}.`);
     } finally {
       setIsLoading(false);
@@ -146,83 +138,82 @@ export default function Home() {
 
     if (activeTab === "covenants") {
       memoContent = `# M&A TRANSACTION LEGAL & COVENANT DILIGENCE MEMORANDUM
-**Deal**: ${dealData.deal_name}
-**Structure**: ${dealData.transaction_type}
-**Announcement Date**: ${dealData.announcement_date}
-**Primary SEC Filing**: ${dealData.filing_reference.form} (ACC: ${dealData.filing_reference.accession_number})
-**Source URL**: ${dealData.filing_reference.document_url}
+**Deal ID**: ${dealData.dealMeta.dealId}
+**Acquirer**: ${dealData.dealMeta.acquirer.name} (${dealData.dealMeta.acquirer.ticker} | CIK: ${dealData.dealMeta.acquirer.cik})
+**Target**: ${dealData.dealMeta.target.name} (${dealData.dealMeta.target.ticker} | CIK: ${dealData.dealMeta.target.cik})
+**Transaction Structure**: ${dealData.dealMeta.transactionStructure}
+**Filing Reference**: ${dealData.dealMeta.filingType} (ACC: ${dealData.dealMeta.accessionNumber}, Date: ${dealData.dealMeta.filingDate})
 
 ---
 
-## 1. Executive Valuation Summary
-- **Enterprise Value**: $${((dealData.valuation.enterprise_value || 0) / 1e9).toFixed(2)}B
-- **Per Share Offer Price**: $${dealData.valuation.per_share_offer_price_usd?.toFixed(2)} (${dealData.parties.deal_type.toUpperCase()})
-- **Unaffected Share Premium**: +${dealData.valuation.premium_to_unaffected_share_price_percent}%
-- **Implied EBITDA Multiple**: ${dealData.valuation.implied_ebitda_multiple}x
-- **Covenant Risk Grade**: ${dealData.strategic_analysis.covenant_risk_grade}
+## 1. Valuation & Financial Term Ribbon
+- **Offer Price Per Share**: $${dealData.valuationRibbon.offerPricePerShare.toFixed(2)} (All-Cash)
+- **Implied Equity Value**: $${(dealData.valuationRibbon.impliedEquityValue / 1e9).toFixed(2)}B
+- **Implied Enterprise Value**: $${(dealData.valuationRibbon.impliedEnterpriseValue / 1e9).toFixed(2)}B
+- **Implied LTM EBITDA Multiple**: ${dealData.valuationRibbon.impliedLtmEbitdaMultiple}
+- **Target Breakup Fee**: $${(dealData.valuationRibbon.targetBreakupFeeUsd / 1e6).toLocaleString()}M (${dealData.valuationRibbon.targetBreakupFeePct}% of Equity Value)
+- **Reverse Breakup Fee**: $${(dealData.valuationRibbon.reverseBreakupFeeInitialUsd / 1e9).toFixed(2)}B – $${(dealData.valuationRibbon.reverseBreakupFeeExtendedUsd / 1e9).toFixed(2)}B (Antitrust Risk, max ${dealData.valuationRibbon.reverseBreakupFeePct}% of EV)
+- **Go-Shop Window**: ${dealData.valuationRibbon.goShopWindowDays} Days (${dealData.valuationRibbon.nonSolicitationStatus})
+- **Matching Rights Window**: ${dealData.valuationRibbon.matchingRightsWindowDays} Business Days
 
 ---
 
-## 2. Key Transaction Covenants & Deal Protections
+## 2. Definitive Covenants Audit
 
-${dealData.structured_covenants
+${dealData.covenantsAudit
   .map(
-    (c) => `### ${c.name}
-- **Metric**: ${c.metric}
-- **SEC Section**: ${c.sec_section}
-- **Confidence Score**: ${c.confidence_score}% (Verified SEC Citation)
+    (c) => `### ${c.title} [${c.clauseType}]
+- **Primary Metric**: ${c.primaryMetric}
+- **Secondary Metric**: ${c.secondaryMetric}
+- **Confidence Score**: ${(c.confidenceScore * 100).toFixed(1)}% (${c.verificationStatus})
+- **Section Anchor**: ${c.sectionAnchor} (Snippet ID: #${c.filingSnippetId})
 - **Summary**: ${c.summary}
-- **Statutory Quote**: 
-  > "${c.statutory_quote}"
-- **Legal Implication**: ${c.risk_implication}
+- **Verbatim Exact Statutory Quote**: 
+  > "${c.exactQuote}"
 `
   )
   .join("\n")}
 
 ---
 
-## 3. Regulatory & Antitrust Strategic Assessment
-- **Deal Thesis**: ${dealData.strategic_analysis.deal_thesis}
-- **Antitrust Posture**: ${dealData.strategic_analysis.antitrust_posture}
-- **MAE Legal Standard**: ${dealData.strategic_analysis.mae_standard}
+## 3. Document Viewer Text Clauses (${dealData.documentViewer.title})
+${dealData.documentViewer.paragraphs
+  .map((p) => `#### ${p.sectionNumber} (ID: ${p.id})\n${p.text}\n`)
+  .join("\n")}
 
 *Generated via EdgarDiff Institutional Engine*
 `;
     } else {
+      const yoy = dealData.yoySectionDiff;
       memoContent = `# 10-K NARRATIVE VARIANCE & MD&A AUDIT MEMORANDUM
-**Company**: ${diffData.ticker}
-**Comparative Period**: FY ${diffData.year_1} vs. FY ${diffData.year_2} Form 10-K (${diffData.section.toUpperCase()})
-**Net Paragraph Shift Score**: ${diffData.materiality_score}%
-**Risk Posture Assessment**: ${diffData.variance_summary.risk_posture_shift}
+**Filing Period**: ${yoy.filingPeriod}
+**Comparison**: ${yoy.comparisonLabel}
+**Net Paragraph Shift Score**: ${yoy.metrics.netShiftScore}%
+**Materiality Classification**: ${yoy.metrics.materialityClassification}
+**Introduced Risk Topics**: +${yoy.metrics.introducedRiskTopicsCount}
+**Omitted Clauses**: -${yoy.metrics.omittedClausesCount}
 
 ---
 
-## 1. Executive Summary of Strategic Shifts
-${diffData.variance_summary.executive_summary}
+## 1. AI Investment Memo Executive Summary
+${yoy.aiSynthesis.executiveSummary}
 
 ---
 
-## 2. Top Strategic Narrative Shifts
-${diffData.variance_summary.top_strategic_changes
+## 2. Key Strategic Findings
+${yoy.aiSynthesis.keyFindings.map((f, i) => `${i + 1}. ${f}`).join("\n\n")}
+
+---
+
+## 3. Classified YoY Diff Blocks
+${yoy.diffBlocks
   .map(
-    (s, idx) => `### Shift ${idx + 1}: ${s.theme} [${s.type.toUpperCase()}]
-- **Analysis**: ${s.analysis}
-- **Exact Verbatim Snippet**:
-  > "${s.snippet_reference}"
+    (b) => `### [${b.status.toUpperCase()}] Materiality: ${b.materiality || "STANDARD"}
+- **Analysis**: ${b.diffAnalysis || "N/A"}
+${b.priorYearText ? `- **Prior Year**: "${b.priorYearText}"\n` : ""}${b.currentYearText ? `- **Current Year**: "${b.currentYearText}"\n` : ""}
 `
   )
   .join("\n")}
-
----
-
-## 3. Footnote & Liquidity Anomaly Flags
-${
-  diffData.variance_summary.anomaly_flags
-    ?.map(
-      (a) => `- **[${a.category.toUpperCase()}] ${a.title}** (${a.severity.toUpperCase()} SEVERITY): ${a.detail}`
-    )
-    .join("\n") || "No anomaly flags identified."
-}
 
 *Generated via EdgarDiff Institutional Engine*
 `;
@@ -235,7 +226,7 @@ ${
     link.setAttribute(
       "download",
       `edgardiff_${activeTab === "covenants" ? "deal_covenants" : "10k_variance"}_${
-        activeTab === "covenants" ? dealData.filing_reference.ticker : diffData.ticker
+        activeTab === "covenants" ? dealData.dealMeta.target.ticker : ticker
       }.md`
     );
     document.body.appendChild(link);
@@ -273,6 +264,7 @@ ${
         ) : (
           <VarianceDiffView
             data={diffData}
+            yoyData={dealData.yoySectionDiff}
             activeSection={activeSection}
             onSectionChange={handleSectionChange}
             isLoading={isLoading}

@@ -3,10 +3,8 @@
 import React, { useState } from "react";
 import {
   Sparkles,
-  Quote,
-  AlertTriangle,
 } from "lucide-react";
-import { DiffResponse, StrategicChange, AnomalyFlag } from "@/types";
+import { DiffResponse, YoYSectionDiff } from "@/types";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -18,7 +16,8 @@ import {
 import { MarkdownContent } from "@/components/MarkdownContent";
 
 interface VarianceDiffViewProps {
-  data: DiffResponse;
+  data?: DiffResponse;
+  yoyData?: YoYSectionDiff;
   activeSection: string;
   onSectionChange: (section: string) => void;
   isLoading?: boolean;
@@ -32,27 +31,57 @@ const SECTION_OPTIONS = [
 
 export function VarianceDiffView({
   data,
+  yoyData,
   activeSection,
   onSectionChange,
   isLoading = false,
 }: VarianceDiffViewProps) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [filterType, setFilterType] = useState<"all" | "changes_only">("all");
-  const [selectedSnippet, setSelectedSnippet] = useState<string | null>(null);
 
-  const {
-    ticker,
-    year_1,
-    year_2,
-    materiality_score,
-    introduced_risk_count = 6,
-    omitted_clause_count = 2,
-    unchanged_clause_count = 18,
-    variance_summary,
-    diff_blocks = [],
-  } = data;
+  // Normalized values prioritizing yoyData (from sampleDeal.json) if present
+  const comparisonLabel = yoyData?.comparisonLabel || (data ? `FY ${data.year_1} vs. FY ${data.year_2} Form 10-K` : "FY 2022 vs. FY 2023 Form 10-K");
+  const filingPeriod = yoyData?.filingPeriod || (data ? `${data.ticker} (${data.section.toUpperCase()})` : "Item 7: MD&A");
+  const netShiftScore = yoyData?.metrics?.netShiftScore ?? data?.materiality_score ?? 42.8;
+  const introducedCount = yoyData?.metrics?.introducedRiskTopicsCount ?? data?.introduced_risk_count ?? 5;
+  const omittedCount = yoyData?.metrics?.omittedClausesCount ?? data?.omitted_clause_count ?? 3;
+  const unchangedCount = data?.unchanged_clause_count ?? 18;
+  const materialityClassification = yoyData?.metrics?.materialityClassification || (netShiftScore > 40 ? "HIGH_GOVERNANCE_AND_ANTITRUST_SHIFT" : "MODERATE_NARRATIVE_EVOLUTION");
 
-  const filteredBlocks = diff_blocks.filter((block) => {
+  const executiveSummary =
+    yoyData?.aiSynthesis?.executiveSummary ||
+    data?.variance_summary?.executive_summary ||
+    "Management narrative reflects a critical strategic pivot across regulatory defense and live service monetization.";
+
+  const keyFindings =
+    yoyData?.aiSynthesis?.keyFindings ||
+    data?.variance_summary?.top_strategic_changes?.map((s) => `${s.theme}: ${s.analysis}`) ||
+    [];
+
+  // Normalize diff rows
+  const normalizedBlocks = yoyData?.diffBlocks
+    ? yoyData.diffBlocks.map((b, idx) => ({
+        id: b.id,
+        status: b.status,
+        materiality: b.materiality,
+        old_text: b.priorYearText || null,
+        new_text: b.currentYearText || null,
+        old_para_num: b.priorYearText ? idx + 1 : undefined,
+        new_para_num: b.currentYearText ? idx + 1 : undefined,
+        diff_analysis: b.diffAnalysis,
+      }))
+    : data?.diff_blocks?.map((b, idx) => ({
+        id: b.id || `diff-${idx}`,
+        status: b.status,
+        materiality: (b.shift_score ?? 0) > 60 ? "HIGH" : "MEDIUM",
+        old_text: b.old_text,
+        new_text: b.new_text,
+        old_para_num: b.old_para_num ?? (b.old_text ? idx + 1 : undefined),
+        new_para_num: b.new_para_num ?? (b.new_text ? idx + 1 : undefined),
+        diff_analysis: undefined,
+      })) || [];
+
+  const filteredBlocks = normalizedBlocks.filter((block) => {
     if (filterType === "changes_only") {
       return block.status !== "unchanged";
     }
@@ -76,11 +105,13 @@ export function VarianceDiffView({
         {/* Comparative Period Title */}
         <div className="flex items-center space-x-3">
           <span className="font-bold text-zinc-100 uppercase tracking-tight">
-            {ticker} COMPARATIVE PERIOD:
+            COMPARATIVE PERIOD:
           </span>
           <span className="rounded bg-zinc-900 px-2 py-0.5 text-zinc-300 border border-zinc-800">
-            FY {year_1} vs. FY {year_2} Form 10-K
+            {comparisonLabel}
           </span>
+          <span className="hidden md:inline text-zinc-500">•</span>
+          <span className="hidden md:inline text-sky-400 font-semibold">{filingPeriod}</span>
         </div>
 
         {/* Section Selector & Drawer Toggle */}
@@ -112,11 +143,9 @@ export function VarianceDiffView({
           >
             <Sparkles className="h-3.5 w-3.5 text-sky-400" />
             <span>AI Investment Memo</span>
-            {variance_summary?.top_strategic_changes?.length > 0 && (
-              <span className="rounded bg-zinc-950 px-1 py-0.2 text-[10px] text-sky-300 border border-zinc-800">
-                {variance_summary.top_strategic_changes.length}
-              </span>
-            )}
+            <span className="rounded bg-zinc-950 px-1 py-0.2 text-[10px] text-sky-300 border border-zinc-800">
+              {keyFindings.length}
+            </span>
           </Button>
         </div>
       </div>
@@ -129,9 +158,9 @@ export function VarianceDiffView({
           </span>
           <div className="mt-1 flex items-baseline space-x-1.5">
             <span className="text-xl font-bold text-zinc-100">
-              {materiality_score.toFixed(1)}%
+              {netShiftScore.toFixed(1)}%
             </span>
-            <span className="text-[10px] text-amber-400">Material Narrative Drift</span>
+            <span className="text-[10px] text-amber-400 font-sans">{materialityClassification}</span>
           </div>
         </div>
 
@@ -141,7 +170,7 @@ export function VarianceDiffView({
           </span>
           <div className="mt-1 flex items-baseline space-x-1.5">
             <span className="text-xl font-bold text-emerald-400">
-              +{introduced_risk_count}
+              +{introducedCount}
             </span>
             <span className="text-[10px] text-zinc-500">New Disclosures</span>
           </div>
@@ -153,9 +182,9 @@ export function VarianceDiffView({
           </span>
           <div className="mt-1 flex items-baseline space-x-1.5">
             <span className="text-xl font-bold text-rose-400">
-              -{omitted_clause_count}
+              -{omittedCount}
             </span>
-            <span className="text-[10px] text-zinc-500">Deprecated Disclaimers</span>
+            <span className="text-[10px] text-zinc-500">Deprecated Clauses</span>
           </div>
         </div>
 
@@ -165,9 +194,9 @@ export function VarianceDiffView({
           </span>
           <div className="mt-1 flex items-baseline space-x-1.5">
             <span className="text-xl font-bold text-zinc-300">
-              {unchanged_clause_count}
+              {unchangedCount}
             </span>
-            <span className="text-[10px] text-zinc-500">Static Boilerplate</span>
+            <span className="text-[10px] text-zinc-500">Static Baseline</span>
           </div>
         </div>
       </div>
@@ -178,7 +207,7 @@ export function VarianceDiffView({
         <div className="flex items-center justify-between border-b border-zinc-800 bg-zinc-950/90 px-4 py-2 font-mono text-xs">
           <div className="flex items-center space-x-4">
             <span className="font-semibold text-zinc-300">
-              CODE-REVIEW SPLIT DIFF (MD&A / 10-K)
+              CODE-REVIEW SPLIT DIFF ({filingPeriod})
             </span>
           </div>
 
@@ -217,16 +246,16 @@ export function VarianceDiffView({
         <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-zinc-800 border-b border-zinc-800/80 bg-zinc-900/40 text-xs font-mono">
           <div className="flex items-center justify-between px-4 py-2 text-zinc-400">
             <div className="flex items-center space-x-2">
-              <span className="text-zinc-500">BASE:</span>
-              <span className="font-bold text-zinc-300">FY {year_1} (10-K Prior Year)</span>
+              <span className="text-zinc-500">PRIOR YEAR:</span>
+              <span className="font-bold text-zinc-300">Baseline Form 10-K</span>
             </div>
             <span className="text-[11px] text-zinc-600">Deletions</span>
           </div>
 
           <div className="flex items-center justify-between px-4 py-2 text-zinc-400">
             <div className="flex items-center space-x-2">
-              <span className="text-sky-400">CURRENT:</span>
-              <span className="font-bold text-zinc-100">FY {year_2} (10-K Reporting Year)</span>
+              <span className="text-sky-400">REPORTING YEAR:</span>
+              <span className="font-bold text-zinc-100">Current Form 10-K</span>
             </div>
             <span className="text-[11px] text-sky-400/70">Additions / Revisions</span>
           </div>
@@ -251,7 +280,7 @@ export function VarianceDiffView({
                     : "hover:bg-zinc-900/30"
                 }`}
               >
-                {/* Left Column (Old / Year 1) */}
+                {/* Left Column (Old / Prior Year) */}
                 <div className="flex p-3 text-xs">
                   {/* Gutter number */}
                   <div className="w-9 shrink-0 select-none font-mono text-[11px] text-zinc-600 text-right pr-3 pt-0.5">
@@ -274,13 +303,13 @@ export function VarianceDiffView({
                       </div>
                     ) : (
                       <div className="flex h-12 items-center justify-center rounded border border-dashed border-zinc-800/70 text-[10px] font-mono italic text-zinc-700">
-                        (Not present in FY {year_1})
+                        (Clause omitted or newly introduced in current year)
                       </div>
                     )}
                   </div>
                 </div>
 
-                {/* Right Column (New / Year 2) */}
+                {/* Right Column (New / Reporting Year) */}
                 <div className="flex p-3 text-xs">
                   {/* Gutter number */}
                   <div className="w-9 shrink-0 select-none font-mono text-[11px] text-zinc-600 text-right pr-3 pt-0.5">
@@ -300,10 +329,16 @@ export function VarianceDiffView({
                         }
                       >
                         <MarkdownContent content={block.new_text} />
+                        {block.diff_analysis && (
+                          <div className="mt-2 rounded bg-zinc-950/80 border border-zinc-800/80 p-2 text-[10px] font-mono text-zinc-400">
+                            <span className="text-sky-400 font-semibold mr-1">ANALYSIS:</span>
+                            <span>{block.diff_analysis}</span>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div className="flex h-12 items-center justify-center rounded border border-dashed border-zinc-800/70 text-[10px] font-mono italic text-zinc-700">
-                        (Omitted in FY {year_2})
+                        (Clause removed in current filing)
                       </div>
                     )}
                   </div>
@@ -329,8 +364,7 @@ export function VarianceDiffView({
               </SheetTitle>
             </div>
             <SheetDescription className="text-xs text-zinc-400 font-sans">
-              Algorithmic synthesis of managerial narrative shift, capital allocation pivots, and risk factor trajectory for{" "}
-              <strong className="text-zinc-200">{ticker}</strong> (FY{year_1} vs FY{year_2}).
+              Algorithmic synthesis of managerial narrative shift, regulatory defense, and risk factor trajectory ({comparisonLabel}).
             </SheetDescription>
           </SheetHeader>
 
@@ -339,114 +373,39 @@ export function VarianceDiffView({
             <div className="rounded-md border border-zinc-800/80 bg-zinc-900/60 p-4">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-500 font-semibold">
-                  Risk Posture Assessment
+                  Executive Narrative Synthesis
                 </span>
                 <span className="rounded bg-rose-500/10 px-2 py-0.5 text-[10px] font-mono text-rose-400 border border-rose-500/20">
-                  {variance_summary?.risk_posture_shift || "Elevated Regulatory Exposure"}
+                  {materialityClassification}
                 </span>
               </div>
               <p className="text-xs text-zinc-300 leading-relaxed font-sans">
-                {variance_summary?.executive_summary}
+                {executiveSummary}
               </p>
             </div>
 
-            {/* Footnote & Liquidity Anomaly Flags */}
-            {variance_summary?.anomaly_flags && variance_summary.anomaly_flags.length > 0 && (
-              <div className="space-y-2.5">
-                <div className="flex items-center space-x-2">
-                  <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
-                  <h4 className="text-xs font-mono uppercase tracking-wider text-zinc-300 font-semibold">
-                    Footnote & Liquidity Anomaly Flags
-                  </h4>
-                </div>
-
-                <div className="space-y-2">
-                  {variance_summary.anomaly_flags.map((anomaly: AnomalyFlag, idx: number) => (
-                    <div
-                      key={idx}
-                      className="rounded-md border border-zinc-800/80 bg-zinc-900/40 p-3 text-xs"
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-semibold text-zinc-200 font-mono text-[11px]">
-                          [{anomaly.category.toUpperCase()}] {anomaly.title}
-                        </span>
-                        <span
-                          className={`rounded px-1.5 py-0.2 text-[10px] font-mono uppercase ${
-                            anomaly.severity === "high"
-                              ? "bg-rose-500/10 text-rose-400 border border-rose-500/20"
-                              : "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                          }`}
-                        >
-                          {anomaly.severity} Severity
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-zinc-400 leading-relaxed font-sans">
-                        {anomaly.detail}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Strategic Narrative Shifts List */}
+            {/* Key Findings List */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <h4 className="text-xs font-mono uppercase tracking-wider text-zinc-300 font-semibold">
-                  Strategic Narrative Shifts ({variance_summary?.top_strategic_changes?.length || 0})
+                  Key Strategic Findings ({keyFindings.length})
                 </h4>
-                <span className="text-[10px] font-mono text-zinc-500">
-                  Click to inspect snippet
-                </span>
               </div>
 
-              {variance_summary?.top_strategic_changes?.map((change: StrategicChange, idx: number) => {
-                const isSelected = selectedSnippet === change.snippet_reference;
-
-                return (
-                  <div
-                    key={idx}
-                    id={`strategic-change-card-${idx}`}
-                    onClick={() => setSelectedSnippet(isSelected ? null : change.snippet_reference)}
-                    className={`cursor-pointer rounded-md border p-3.5 transition-all text-xs ${
-                      isSelected
-                        ? "border-sky-400 bg-zinc-900/90 shadow-md shadow-sky-950/20"
-                        : "border-zinc-800/80 bg-zinc-900/40 hover:border-zinc-700 hover:bg-zinc-900/70"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-xs font-bold text-zinc-100 font-sans">
-                        {change.theme}
-                      </span>
-                      <span
-                        className={`rounded px-1.5 py-0.5 text-[10px] font-mono uppercase ${
-                          change.type === "added"
-                            ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                            : change.type === "removed"
-                            ? "bg-rose-500/10 text-rose-400 border border-rose-500/20"
-                            : "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                        }`}
-                      >
-                        {change.type}
-                      </span>
-                    </div>
-
-                    <p className="text-[11px] text-zinc-400 font-sans leading-relaxed mb-2.5">
-                      {change.analysis}
-                    </p>
-
-                    <div className="rounded border border-zinc-800/80 bg-[#08090c] p-2 text-[10px] font-mono text-zinc-300">
-                      <div className="flex items-center space-x-1 text-zinc-500 mb-0.5">
-                        <Quote className="h-3 w-3 text-sky-400" />
-                        <span>VERBATIM 10-K DISCLOSURE:</span>
-                      </div>
-                      <p className="italic text-zinc-300/90 leading-relaxed">
-                        &ldquo;{change.snippet_reference}&rdquo;
-                      </p>
-                    </div>
+              {keyFindings.map((finding, idx) => (
+                <div
+                  key={idx}
+                  className="rounded-md border border-zinc-800/80 bg-zinc-900/40 p-3.5 text-xs font-sans text-zinc-300 leading-relaxed space-y-1"
+                >
+                  <div className="flex items-center space-x-2 font-mono text-[10px] text-sky-400 mb-1">
+                    <span className="flex h-4 w-4 items-center justify-center rounded-full bg-sky-950 border border-sky-800 text-sky-300 font-bold">
+                      {idx + 1}
+                    </span>
+                    <span>STRATEGIC SHIFT OBSERVATION</span>
                   </div>
-                );
-              })}
+                  <p>{finding}</p>
+                </div>
+              ))}
             </div>
           </div>
         </SheetContent>

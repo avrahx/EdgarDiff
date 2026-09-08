@@ -1,0 +1,161 @@
+{
+  "dealMeta": {
+    "dealId": "MSFT-ATVI-2022",
+    "acquirer": {
+      "name": "Microsoft Corporation",
+      "ticker": "MSFT",
+      "cik": "0000789019"
+    },
+    "target": {
+      "name": "Activision Blizzard, Inc.",
+      "ticker": "ATVI",
+      "cik": "0000718877"
+    },
+    "filingType": "Form DEFM14A / 8-K",
+    "accessionNumber": "0001104659-22-025210",
+    "filingDate": "2022-01-18",
+    "transactionStructure": "100% All-Cash Statutory Merger (Anchorage Merger Sub Inc.)"
+  },
+  "valuationRibbon": {
+    "offerPricePerShare": 95.00,
+    "impliedEquityValue": 68700000000,
+    "impliedEnterpriseValue": 65300000000,
+    "impliedLtmEbitdaMultiple": "19.8x",
+    "targetBreakupFeeUsd": 2270100000,
+    "targetBreakupFeePct": 3.3,
+    "reverseBreakupFeeInitialUsd": 3000000000,
+    "reverseBreakupFeeExtendedUsd": 4500000000,
+    "reverseBreakupFeePct": 6.5,
+    "goShopWindowDays": 0,
+    "nonSolicitationStatus": "Strict No-Shop (Fiduciary Out Applicable)",
+    "matchingRightsWindowDays": 4
+  },
+  "covenantsAudit": [
+    {
+      "id": "cov-01",
+      "clauseType": "TARGET_TERMINATION_FEE",
+      "title": "Company Termination Fee (Breakup Fee)",
+      "confidenceScore": 0.994,
+      "verificationStatus": "VERIFIED_SEC_CITATION",
+      "primaryMetric": "$2,270,100,000",
+      "secondaryMetric": "3.30% of Equity Value",
+      "sectionAnchor": "sec-8.3-b",
+      "summary": "Payable by Activision Blizzard if the Company Board terminates the Agreement to enter into an Alternative Acquisition Agreement for a Superior Proposal, or if Microsoft terminates following a Company Adverse Recommendation Change.",
+      "exactQuote": "If Activision Blizzard terminates the merger agreement in order to accept a superior proposal, or if Microsoft terminates following an adverse recommendation change, Activision Blizzard must pay a $2,270,100,000 termination fee to Microsoft.",
+      "filingSnippetId": "snippet-covenant-target-fee"
+    },
+    {
+      "id": "cov-02",
+      "clauseType": "REVERSE_TERMINATION_FEE",
+      "title": "Parent Regulatory Termination Fee",
+      "confidenceScore": 0.998,
+      "verificationStatus": "VERIFIED_SEC_CITATION",
+      "primaryMetric": "$3,000,000,000 – $4,500,000,000",
+      "secondaryMetric": "4.37% - 6.55% of Equity Value",
+      "sectionAnchor": "sec-8.3-c",
+      "summary": "Payable by Microsoft if the transaction is terminated due to failure to obtain antitrust or regulatory clearances (HSR, CMA, FTC injunction) prior to the Termination Date. Scaled from $3.0B up to $4.5B in the July 2023 extension letter agreement.",
+      "exactQuote": "Parent and Merger Sub agreed that the Parent Termination Fee, if payable under the Merger Agreement after August 29, 2023, shall be increased from $3,000,000,000 to $3,500,000,000 and after September 15, 2023, shall be increased to $4,500,000,000.",
+      "filingSnippetId": "snippet-covenant-reverse-fee"
+    },
+    {
+      "id": "cov-03",
+      "clauseType": "GO_SHOP_PROVISION",
+      "title": "No-Shop & Fiduciary Exceptions",
+      "confidenceScore": 0.971,
+      "verificationStatus": "VERIFIED_SEC_CITATION",
+      "primaryMetric": "0 Days (Strict No-Shop)",
+      "secondaryMetric": "4 Business Days Matching Window",
+      "sectionAnchor": "sec-5.3-a",
+      "summary": "No go-shop period permitted. Activision Blizzard subject to customary non-solicitation covenants immediately upon signing. Board retains standard fiduciary out to negotiate unsolicited superior proposals subject to a 4 business day match right for Microsoft.",
+      "exactQuote": "From the date of this Agreement until the Effective Time, the Company shall not, and shall cause its Subsidiaries not to, directly or indirectly: (i) solicit, initiate, or knowingly encourage or facilitate any inquiries or proposals that constitute an Acquisition Proposal...",
+      "filingSnippetId": "snippet-covenant-no-shop"
+    },
+    {
+      "id": "cov-04",
+      "clauseType": "MATERIAL_ADVERSE_EFFECT",
+      "title": "Material Adverse Effect (MAE) Standards",
+      "confidenceScore": 0.963,
+      "verificationStatus": "VERIFIED_SEC_CITATION",
+      "primaryMetric": "Customary Exclusions",
+      "secondaryMetric": "Disproportionate Impact Proviso",
+      "sectionAnchor": "sec-1.1-mae",
+      "summary": "Carves out general economic downturns, pandemic impacts, and antitrust scrutiny delays from qualifying as a Company MAE, unless such conditions disproportionately impact Activision relative to other interactive entertainment publishers.",
+      "exactQuote": "Company Material Adverse Effect means any change, event, condition, development or occurrence that has had, or would reasonably be expected to have, a material adverse effect on the business, assets, liabilities or financial condition of the Company and its Subsidiaries, taken as a whole...",
+      "filingSnippetId": "snippet-covenant-mae"
+    }
+  ],
+  "documentViewer": {
+    "title": "AGREEMENT AND PLAN OF MERGER (EX-2.1)",
+    "paragraphs": [
+      {
+        "id": "snippet-preamble",
+        "sectionNumber": "RECITALS",
+        "text": "THIS AGREEMENT AND PLAN OF MERGER is made and entered into as of January 18, 2022, by and among Microsoft Corporation, a Washington corporation ('Parent'), Anchorage Merger Sub Inc., a Delaware corporation and a wholly owned subsidiary of Parent ('Merger Sub'), and Activision Blizzard, Inc., a Delaware corporation (the 'Company')."
+      },
+      {
+        "id": "snippet-covenant-no-shop",
+        "sectionNumber": "SECTION 5.3(a)",
+        "text": "No Solicitation or Negotiation. From the date of this Agreement until the earlier to occur of the termination of this Agreement pursuant to Article VIII and the Effective Time, the Company shall not, and shall cause each of its Subsidiaries and its and their respective directors, officers, employees, investment bankers, attorneys, accountants and other advisors or representatives not to, directly or indirectly: (i) solicit, initiate, or knowingly encourage or knowingly facilitate any inquiries or proposals that constitute, or would reasonably be expected to lead to, an Acquisition Proposal; (ii) participate or engage in any discussions or negotiations with, or furnish any non-public information relating to the Company or its Subsidiaries to, any Person in connection with an Acquisition Proposal; provided, however, that prior to obtaining Stockholder Approval, the Company Board may participate in discussions with a Person making an unsolicited bona fide written Acquisition Proposal if the Board determines in good faith that failure to do so would be inconsistent with its fiduciary duties under Delaware law."
+      },
+      {
+        "id": "snippet-covenant-target-fee",
+        "sectionNumber": "SECTION 8.3(b)",
+        "text": "Company Termination Fee. In the event that this Agreement is terminated by: (i) Parent pursuant to Section 8.1(e) (Company Adverse Recommendation Change); or (ii) the Company pursuant to Section 8.1(g) (Superior Proposal); then the Company shall pay to Parent (or its designee) prior to or concurrently with such termination, a cash fee equal to $2,270,100,000 (the 'Company Termination Fee') by wire transfer of immediately available funds to an account designated in writing by Parent."
+      },
+      {
+        "id": "snippet-covenant-reverse-fee",
+        "sectionNumber": "SECTION 8.3(c)",
+        "text": "Parent Regulatory Termination Fee. In the event that this Agreement is terminated by either Parent or the Company pursuant to (i) Section 8.1(b) (Termination Date / Outside Date) and at the time of such termination all conditions set forth in Section 7.1 and Section 7.2 have been satisfied other than conditions relating to the expiration of the waiting period under the HSR Act or other Antitrust Clearances; or (ii) Section 8.1(c) (Final Non-Appealable Antitrust Restraint), then Parent shall pay or cause to be paid to the Company an amount equal to $3,000,000,000 (the 'Parent Termination Fee'), subject to escalation up to $4,500,000,000 in accordance with the Letter Agreement dated July 18, 2023."
+      },
+      {
+        "id": "snippet-covenant-mae",
+        "sectionNumber": "SECTION 1.1",
+        "text": "'Company Material Adverse Effect' means any change, event, condition, development or occurrence that has had, or would reasonably be expected to have, a material adverse effect on the business, assets, liabilities or financial condition of the Company and its Subsidiaries, taken as a whole; provided, however, that no change resulting from general geopolitical conditions, changes in GAAP, changes in securities markets, or regulatory delays arising under antitrust enforcement shall be deemed to constitute a Company Material Adverse Effect."
+      }
+    ]
+  },
+  "yoySectionDiff": {
+    "filingPeriod": "Item 7: Management's Discussion and Analysis (MD&A)",
+    "comparisonLabel": "FY 2022 vs. FY 2023 Form 10-K",
+    "metrics": {
+      "netShiftScore": 42.8,
+      "introducedRiskTopicsCount": 5,
+      "omittedClausesCount": 3,
+      "materialityClassification": "HIGH_GOVERNANCE_AND_ANTITRUST_SHIFT"
+    },
+    "aiSynthesis": {
+      "executiveSummary": "Management narrative reflects a critical pivot from internal workplace culture remedies (FY22) to regulatory defense, cross-platform franchise preservation, and monetization shifts across Call of Duty and King Mobile (FY23).",
+      "keyFindings": [
+        "Antitrust Contingency & Parity Commitments: Introduced extensive disclosure regarding 10-year platform licensing parity agreements with Nintendo and Sony to satisfy CMA and EC regulatory undertakings.",
+        "Revenue Recognition & Live Services: Shifted commentary from standalone premium box unit sales toward recurring in-game subscription models and Battle Pass season passes.",
+        "Litigation & Regulatory Pre-Merger Drag: Significant reduction in workplace misconduct disclosure volume following settlement resolutions, replaced by transaction closing contingencies and appeal risks against the FTC."
+      ]
+    },
+    "diffBlocks": [
+      {
+        "id": "diff-01",
+        "status": "modified",
+        "materiality": "HIGH",
+        "priorYearText": "Our net revenues for fiscal year 2022 were $7,528 million, representing a decrease of 14% compared to $8,803 million for 2021. The decrease was primarily driven by lower premium deliveries for Call of Duty: Vanguard compared to the prior year's title, partially offset by strength in Candy Crush mobile offerings.",
+        "currentYearText": "Our net revenues for fiscal year 2023 increased 29% to $9,714 million, driven by the successful launch of Diablo IV and accelerated live services bookings across the Call of Duty franchise, partially offset by elevated legal and administrative fees incurred in connection with the pending Microsoft merger transaction.",
+        "diffAnalysis": "Rebound in top-line growth driven by tentpole releases; introduction of explicit transaction fee drag in operating income commentary."
+      },
+      {
+        "id": "diff-02",
+        "status": "added",
+        "materiality": "CRITICAL",
+        "priorYearText": "",
+        "currentYearText": "In connection with regulatory reviews of the pending acquisition by Microsoft, we have entered into binding commercial and platform agreements ensuring continued parity access to our core intellectual properties across third-party console ecosystems and cloud streaming services for a minimum term of ten years following the consummation of the merger.",
+        "diffAnalysis": "New strategic disclosure: explicit long-term cross-platform licensing commitments negotiated to resolve global antitrust objections."
+      },
+      {
+        "id": "diff-03",
+        "status": "removed",
+        "materiality": "MEDIUM",
+        "priorYearText": "We continue to incur substantial costs and allocate senior management resources toward addressing historical workplace culture claims and workplace regulatory investigations initiated by the California DFEH and the Equal Employment Opportunity Commission (EEOC).",
+        "currentYearText": "",
+        "diffAnalysis": "Removal reflects formal settlements and consent decree entries finalized during early 2023, shifting management focus to closing conditions."
+      }
+    ]
+  }
+}

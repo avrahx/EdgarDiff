@@ -12,10 +12,11 @@ export interface DiffBlock {
   new_text: string | null;
   old_para_num?: number;
   new_para_num?: number;
-  similarity: number;
-  shift_score: number;
+  similarity?: number;
+  shift_score?: number;
   materiality_score?: number;
   word_diffs?: WordDiff[];
+  diff_analysis?: string;
 }
 
 export interface StrategicChange {
@@ -44,8 +45,8 @@ export interface DiffResponse {
   ticker: string;
   form_type: string;
   section: string;
-  year_1: number;
-  year_2: number;
+  year_1: number | string;
+  year_2: number | string;
   materiality_score: number;
   introduced_risk_count?: number;
   omitted_clause_count?: number;
@@ -54,78 +55,100 @@ export interface DiffResponse {
   diff_blocks: DiffBlock[];
 }
 
-export interface DealParties {
-  acquirer: string;
-  target: string;
-  deal_type: "cash" | "stock" | "mix" | "unknown";
-}
+// -----------------------------------------------------------------------------
+// Exact M&A Sample Dataset Types (from sampleDeal.json)
+// -----------------------------------------------------------------------------
 
-export interface DealValuation {
-  enterprise_value?: number | null;
-  equity_value?: number | null;
-  implied_ebitda_multiple?: number | null;
-  per_share_offer_price_usd?: number | null;
-  premium_to_unaffected_share_price_percent?: number | null;
-}
-
-export interface DealCovenants {
-  termination_fee_target_usd?: number | null;
-  termination_fee_percent?: number | null;
-  reverse_termination_fee_usd?: number | null;
-  go_shop_period_days?: number | null;
-  matching_rights_window_days?: number | null;
-  exact_source_quote: string;
-}
-
-export interface StructuredCovenantItem {
-  id: string; // DOM anchor id, e.g. "clause-target-breakup"
-  name: string;
-  metric: string;
-  category: "breakup" | "reverse_breakup" | "solicitation" | "matching" | "mae" | "regulatory";
-  confidence_score: number; // e.g. 99.4
-  sec_section: string;
-  summary: string;
-  statutory_quote: string;
-  risk_implication: string;
-}
-
-export interface MergerAgreementSection {
-  id: string; // DOM id to scroll to
-  section_number: string;
-  title: string;
-  paragraphs: {
-    id: string;
-    text: string;
-    is_covenant_anchor?: boolean;
-    covenant_ref?: string;
-  }[];
-}
-
-export interface SampleDealData {
-  deal_name: string;
-  transaction_type: string;
-  announcement_date: string;
-  filing_reference: {
-    form: string;
+export interface DealMeta {
+  dealId: string;
+  acquirer: {
+    name: string;
     ticker: string;
-    target_cik: string;
-    acquirer_cik: string;
-    accession_number: string;
-    filing_date: string;
-    acceptance_timestamp: string;
-    document_url: string;
+    cik: string;
   };
-  parties: DealParties;
-  valuation: DealValuation;
-  covenants: DealCovenants;
-  structured_covenants: StructuredCovenantItem[];
-  agreement_sections: MergerAgreementSection[];
-  strategic_analysis: {
-    deal_thesis: string;
-    antitrust_posture: string;
-    covenant_risk_grade: string;
-    mae_standard: string;
+  target: {
+    name: string;
+    ticker: string;
+    cik: string;
   };
-  status: string;
-  cached: boolean;
+  filingType: string;
+  accessionNumber: string;
+  filingDate: string;
+  transactionStructure: string;
 }
+
+export interface ValuationRibbon {
+  offerPricePerShare: number;
+  impliedEquityValue: number;
+  impliedEnterpriseValue: number;
+  impliedLtmEbitdaMultiple: string;
+  targetBreakupFeeUsd: number;
+  targetBreakupFeePct: number;
+  reverseBreakupFeeInitialUsd: number;
+  reverseBreakupFeeExtendedUsd: number;
+  reverseBreakupFeePct: number;
+  goShopWindowDays: number;
+  nonSolicitationStatus: string;
+  matchingRightsWindowDays: number;
+}
+
+export interface CovenantAuditItem {
+  id: string;
+  clauseType: string;
+  title: string;
+  confidenceScore: number; // e.g. 0.994
+  verificationStatus: string; // e.g. "VERIFIED_SEC_CITATION"
+  primaryMetric: string;
+  secondaryMetric: string;
+  sectionAnchor: string;
+  summary: string;
+  exactQuote: string;
+  filingSnippetId: string;
+}
+
+export interface DocumentViewerParagraph {
+  id: string;
+  sectionNumber: string;
+  text: string;
+}
+
+export interface DocumentViewer {
+  title: string;
+  paragraphs: DocumentViewerParagraph[];
+}
+
+export interface YoYDiffBlock {
+  id: string;
+  status: "modified" | "added" | "removed" | "unchanged";
+  materiality?: string;
+  priorYearText: string;
+  currentYearText: string;
+  diffAnalysis?: string;
+}
+
+export interface YoYSectionDiff {
+  filingPeriod: string;
+  comparisonLabel: string;
+  metrics: {
+    netShiftScore: number;
+    introducedRiskTopicsCount: number;
+    omittedClausesCount: number;
+    materialityClassification: string;
+  };
+  aiSynthesis: {
+    executiveSummary: string;
+    keyFindings: string[];
+  };
+  diffBlocks: YoYDiffBlock[];
+}
+
+export interface FullSampleDealJson {
+  dealMeta: DealMeta;
+  valuationRibbon: ValuationRibbon;
+  covenantsAudit: CovenantAuditItem[];
+  documentViewer: DocumentViewer;
+  yoySectionDiff: YoYSectionDiff;
+}
+
+export type SampleDealData = FullSampleDealJson | Record<string, unknown>;
+

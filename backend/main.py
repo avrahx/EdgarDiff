@@ -300,4 +300,16 @@ SAMPLE_DEAL_DATA: Dict[str, Any] = {
 @app.get("/api/demo/sample-deal")
 def get_sample_deal():
     """Return instant pre-cached results for landmark MSFT / ATVI ($68.7B) transaction."""
+    import json
+    from pathlib import Path
+    
+    # Check data/sample_deal.json or frontend/data/sampleDeal.json
+    for path in [
+        Path(__file__).resolve().parent.parent / "data" / "sample_deal.json",
+        Path(__file__).resolve().parent / "data" / "sample_deal.json",
+        Path(__file__).resolve().parent.parent / "frontend" / "data" / "sampleDeal.json",
+    ]:
+        if path.exists():
+            with open(path, "r", encoding="utf-8") as f:
+                return json.load(f)
     return SAMPLE_DEAL_DATA
