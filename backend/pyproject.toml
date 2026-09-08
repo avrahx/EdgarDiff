@@ -1,0 +1,22 @@
+[project]
+name = "edgardiff-backend"
+version = "0.1.0"
+description = "FastAPI backend and SEC ingestion pipeline for EdgarDiff"
+readme = "../README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.110.0",
+    "uvicorn[standard]>=0.28.0",
+    "pydantic>=2.6.0",
+    "edgartools>=2.15.0",
+    "sec-parser>=0.30.0",
+    "beautifulsoup4>=4.12.0",
+    "pytest>=8.0.0",
+    "python-dotenv>=1.0.0",
+    "httpx>=0.27.0",
+    "pip-tools>=7.4.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["../tests"]
+pythonpath = [".."]

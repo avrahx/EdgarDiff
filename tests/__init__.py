@@ -1,0 +1,1 @@
+"""EdgarDiff tests package."""

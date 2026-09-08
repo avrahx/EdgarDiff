@@ -1,0 +1,1 @@
+"""EdgarDiff backend application package."""
